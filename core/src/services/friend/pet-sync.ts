@@ -105,12 +105,10 @@ export async function runFriendPetSync(): Promise<FriendPetSyncResult> {
 
     syncRunning = true;
     try {
-        const reply: any = await submitAccountTask(
-            'friend.pet-sync.list',
-            () => getAllFriends(false, 'low'),
-            { priority: 'maintenance', dedupeKey: 'friend.pet-sync.list' },
-        );
-        const friends: any[] = extractReplyFriends(reply);
+        const cachedFriends: any[] = visitStrategyRef().getFreshFriendsListCacheOnly();
+        const friends: any[] = cachedFriends.length > 0
+            ? cachedFriends
+            : extractReplyFriends(await getAllFriends(false, 'low'));
         const accountId: string = process.env.FARM_ACCOUNT_ID || '';
         const blacklist: Set<number> = new Set(getFriendBlacklist(accountId));
         const invalid: Set<number> = getInvalidKnownFriendGidSet();

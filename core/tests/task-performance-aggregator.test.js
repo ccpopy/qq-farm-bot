@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const { TaskPerformanceAggregator } = require('../dist/app/task-performance-aggregator');
+const { createScheduledTaskMetric } = require('../dist/app/account-task-metrics');
 
 test('task performance metrics are grouped without high-cardinality numeric suffixes', () => {
     let now = 1000;
@@ -46,4 +47,36 @@ test('task performance metrics are grouped without high-cardinality numeric suff
     assert.equal(snapshot.windowStartedAt, 1000);
     assert.equal(snapshot.windowEndedAt, 2000);
     assert.equal(aggregator.drain(), null);
+});
+
+test('scheduled task metrics separate scheduler lag from execution time', () => {
+    const metric = createScheduledTaskMetric({
+        name: 'scheduler.friend-round',
+        priority: 'scheduled',
+        outcome: 'success',
+        dueAt: 1000,
+        startedAt: 1450,
+        finishedAt: 3450,
+    });
+
+    assert.equal(metric.waitMs, 450);
+    assert.equal(metric.runMs, 2000);
+    assert.equal(metric.totalMs, 2450);
+    assert.equal(metric.inline, true);
+    assert.equal(metric.queueDepthAtSubmit, 0);
+});
+
+test('cancelled scheduled task metrics retain time already spent running', () => {
+    const metric = createScheduledTaskMetric({
+        name: 'scheduler.friend-round',
+        priority: 'scheduled',
+        outcome: 'cancelled',
+        dueAt: 1000,
+        startedAt: 1450,
+        finishedAt: 3450,
+    });
+
+    assert.equal(metric.waitMs, 450);
+    assert.equal(metric.runMs, 2000);
+    assert.equal(metric.totalMs, 2450);
 });

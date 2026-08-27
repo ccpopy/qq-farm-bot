@@ -478,6 +478,12 @@ export function getFriendsListCacheOnly(): any[] {
     return withFriendPetView(friendsListCache);
 }
 
+export function getFreshFriendsListCacheOnly(): any[] {
+    if (!Array.isArray(friendsListCache)) return [];
+    if ((Date.now() - friendsListCacheTime) >= getFriendsListCacheTtlMs()) return [];
+    return withFriendPetView(friendsListCache);
+}
+
 /**
  * 获取指定好友的农田详情 (进入-获取-离开)
  */

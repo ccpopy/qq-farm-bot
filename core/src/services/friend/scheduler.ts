@@ -269,9 +269,13 @@ interface CheckFriendsOptions {
     onlySteal?: boolean;
     onlyBad?: boolean;
     ignoreExpLimit?: boolean;
+    signal?: AbortSignal;
 }
 
 export async function checkFriends(options: CheckFriendsOptions = {}): Promise<boolean> {
+    const signal = options.signal;
+    if (signal?.aborted) return false;
+
     const state: any = getUserState();
     if (!isAutomationOn('friend')) return false;
 
@@ -298,10 +302,8 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
     checkDailyReset();
 
     try {
-        const friendsReply: any = await submitAccountTask('friend.scan.list', getAllFriends, {
-            priority: 'scheduled',
-            dedupeKey: 'friend.scan.list',
-        });
+        const friendsReply: any = await getAllFriends();
+        if (signal?.aborted) return false;
         // 巡查结果同时刷新面板好友列表缓存，避免页面再次请求同一份列表。
         cacheFriendsListFromReply(friendsReply);
         const friends: any[] = extractReplyFriends(friendsReply);
@@ -358,6 +360,7 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
             // });
 
             for (const friend of stealFriends) {
+                if (signal?.aborted) break;
                 try {
                     await submitAccountTask(
                         `friend.steal:${friend.gid}`,
@@ -367,9 +370,12 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                 } catch {
                     // 单个好友失败不影响整体
                 }
+                if (signal?.aborted) break;
                 await randomDelay(500, 800);
             }
         }
+
+        if (signal?.aborted) return false;
 
         // 偷菜后自动出售
         if (totalActions.steal > 0) {
@@ -393,6 +399,7 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
             // 缓存未确认的好友不再逐个进农场试探，由每日宠物同步补齐。
             let protectDogFilteredCount: number = 0;
             for (let i: number = 0; i < helpFriends.length; i++) {
+                if (signal?.aborted) break;
                 const friend: any = helpFriends[i];
 
                 // 检查是否还能获得帮助经验
@@ -489,6 +496,7 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                 } catch (e: any) {
                     log('好友', `批量帮助第 ${i + 1} 个好友失败: ${friend.name}, 错误: ${e.message}`, { module: 'friend', event: '批量帮助失败', index: i + 1, friendName: friend.name, error: e.message });
                 }
+                if (signal?.aborted) break;
                 await randomDelay(500, 800);
             }
             if (protectDogFilteredCount > 0) {
@@ -502,6 +510,8 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
             }
             log('好友', '批量帮助循环结束', { module: 'friend', event: '批量帮助结束' });
         }
+
+        if (signal?.aborted) return false;
 
         // 第四阶段：批量捣乱（放虫放草）
         if (effectiveBadEnabled && !isBadOperationLimitReached()) {
@@ -542,6 +552,7 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                 log('好友', `找到 ${badFriends.length} 个可捣乱的好友，处理等级最高的前${topBadFriends.length}个`, { module: 'friend', event: '放虫放草好友列表', totalCount: badFriends.length, topCount: topBadFriends.length });
 
                 for (let i: number = 0; i < topBadFriends.length; i++) {
+                    if (signal?.aborted) break;
                     const friend: any = topBadFriends[i];
                     if (isBadOperationLimitReached()) break;
 
@@ -560,11 +571,14 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                     } catch {
                         // 单个好友失败不影响整体
                     }
+                    if (signal?.aborted) break;
                     if (isBadOperationLimitReached()) break;
                     await randomDelay(2000, 3500);
                 }
             }
         }
+
+        if (signal?.aborted) return false;
 
         // 生成总结日志
         const summary: string[] = [];

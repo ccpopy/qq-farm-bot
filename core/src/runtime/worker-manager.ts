@@ -8,6 +8,7 @@ const DEFAULT_API_CALL_TIMEOUT_MS = 10000;
 // 好友列表只读缓存或拉一次名单，给的余量少一些。
 const API_CALL_TIMEOUTS_MS: Record<string, number> = {
     scanWeatherFriends: 60000,
+    getFriends: 30000,
     getWeatherFriends: 30000,
 };
 

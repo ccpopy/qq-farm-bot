@@ -52,7 +52,9 @@ function createWorkerApiRegistry(context: WorkerApiContext): Map<string, WorkerA
 
     register('getLands', () => farm.getLandsDetail());
     register('getIllustratedSnapshot', () => illustrated.getIllustratedSnapshot());
-    register('getFriends', ([forceSync]) => friend.getFriendsList(forceSync === true));
+    register('getFriends', ([forceSync]) => friend.getFriendsList(forceSync === true), {
+        execution: 'self-queued',
+    });
     register('getFriendsCache', () => friend.getFriendsListCacheOnly(), { execution: 'direct' });
     register('clearFriendsCache', () => {
         friend.clearFriendsListCache();
@@ -131,7 +133,9 @@ function createWorkerApiRegistry(context: WorkerApiContext): Map<string, WorkerA
     register('claimQixiBridgeRewards', () => activity.claimQixiBridgeRewards());
     register('giftQixiSachet', ([friendGid, messageTextId]) => activity.giftQixiSachet(friendGid, messageTextId));
     register('exchangeWeatherCollectorBottle', () => activity.exchangeWeatherCollectorBottle());
-    register('getWeatherFriends', () => activity.getWeatherFriends());
+    register('getWeatherFriends', () => activity.getWeatherFriends(), {
+        execution: 'self-queued',
+    });
     register('scanWeatherFriends', ([friendGids]) => activity.scanWeatherFriends(friendGids), {
         execution: 'self-queued',
     });

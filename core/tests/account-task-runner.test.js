@@ -296,3 +296,35 @@ test('cleared tasks emit cancelled metrics', async () => {
     gate.resolve();
     await active;
 });
+
+test('closing the queue lets the active slice finish and rejects the next submission', async () => {
+    const runner = new AccountTaskRunner();
+    const firstStarted = deferred();
+    const releaseFirst = deferred();
+    const visited = [];
+
+    const round = (async () => {
+        for (const gid of [1, 2, 3]) {
+            await runner.submit(`friend.visit:${gid}`, async () => {
+                visited.push(gid);
+                if (gid === 1) {
+                    firstStarted.resolve();
+                    await releaseFirst.promise;
+                }
+            });
+        }
+    })();
+
+    await firstStarted.promise;
+    assert.equal(runner.close('账号已停止'), 0);
+    releaseFirst.resolve();
+
+    await assert.rejects(round, /账号已停止/);
+    await assert.rejects(runner.submit('late', () => visited.push('late')), /账号已停止/);
+    assert.deepEqual(visited, [1]);
+    assert.equal(runner.getSnapshot().closed, true);
+
+    runner.open();
+    assert.equal(await runner.submit('after-open', () => 'ok'), 'ok');
+    assert.equal(runner.getSnapshot().closed, false);
+});

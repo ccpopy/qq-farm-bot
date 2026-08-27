@@ -38,6 +38,7 @@ export {
     clearFriendsListCache,
     deleteFriend,
     doFriendOperation,
+    getFreshFriendsListCacheOnly,
     getFriendLandsDetail,
     getFriendsList,
     getFriendsListCacheOnly,

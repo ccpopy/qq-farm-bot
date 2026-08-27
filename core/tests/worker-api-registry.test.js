@@ -110,7 +110,11 @@ test('only explicit local operations bypass account serialization', () => {
         .map(([method]) => method)
         .sort();
 
-    assert.deepEqual(selfQueued, ['scanWeatherFriends']);
+    assert.deepEqual(selfQueued, [
+        'getFriends',
+        'getWeatherFriends',
+        'scanWeatherFriends',
+    ]);
     assert.equal(registry.get('getFriendLands').execution, 'queued');
     assert.equal(registry.get('getCurrentWeatherActivity').execution, 'queued');
 });

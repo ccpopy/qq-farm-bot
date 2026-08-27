@@ -56,6 +56,7 @@ class AccountTaskRunner {
     private activeTask: QueuedTask<any> | null = null;
     private sequence = 0;
     private drainScheduled = false;
+    private closedReason = '';
 
     constructor(options: AccountTaskRunnerOptions = {}) {
         this.now = options.now || Date.now;
@@ -67,10 +68,22 @@ class AccountTaskRunner {
         this.onMetric = typeof observer === 'function' ? observer : null;
     }
 
+    close(reason = '账号任务已停止'): number {
+        const closedReason = String(reason || '账号任务已停止');
+        this.closedReason = closedReason;
+        return this.clearPending(closedReason);
+    }
+
+    open(): void {
+        this.closedReason = '';
+    }
+
     submit<T>(name: string, run: () => Promise<T> | T, options: AccountTaskOptions = {}): Promise<T> {
         const taskName = String(name || '').trim();
         if (!taskName) throw new Error('账号任务名称不能为空');
         if (typeof run !== 'function') throw new Error(`账号任务 ${taskName} 缺少执行函数`);
+
+        if (this.closedReason) return Promise.reject(new Error(this.closedReason));
 
         if (this.executionContext.getStore() === this.activeTask) {
             return this.runInline(taskName, run, options.priority || 'scheduled');
@@ -130,6 +143,7 @@ class AccountTaskRunner {
 
     getSnapshot(): any {
         return {
+            closed: this.closedReason !== '',
             running: this.activeTask
                 ? {
                     name: this.activeTask.name,
@@ -264,6 +278,14 @@ function clearPendingAccountTasks(reason?: string): number {
     return accountTaskRunner.clearPending(reason);
 }
 
+function closeAccountTaskQueue(reason?: string): number {
+    return accountTaskRunner.close(reason);
+}
+
+function openAccountTaskQueue(): void {
+    accountTaskRunner.open();
+}
+
 function getAccountTaskRunnerSnapshot(): any {
     return accountTaskRunner.getSnapshot();
 }
@@ -275,7 +297,9 @@ function setAccountTaskMetricObserver(observer: AccountTaskMetricObserver | null
 module.exports = {
     AccountTaskRunner,
     clearPendingAccountTasks,
+    closeAccountTaskQueue,
     getAccountTaskRunnerSnapshot,
+    openAccountTaskQueue,
     setAccountTaskMetricObserver,
     submitAccountTask,
 };

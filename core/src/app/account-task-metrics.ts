@@ -27,6 +27,15 @@ export interface AccountTaskMetricSource {
 
 export type AccountTaskMetricObserver = (metric: AccountTaskMetric) => void;
 
+interface ScheduledTaskMetricInput {
+    name: string;
+    priority?: AccountTaskPriority;
+    outcome?: AccountTaskMetric['outcome'];
+    dueAt: number;
+    startedAt: number;
+    finishedAt: number;
+}
+
 export function createAccountTaskMetric(
     task: AccountTaskMetricSource,
     outcome: AccountTaskMetric['outcome'],
@@ -51,4 +60,21 @@ export function createAccountTaskMetric(
         dedupeHits: task.dedupeHits,
         inline,
     };
+}
+
+export function createScheduledTaskMetric(input: ScheduledTaskMetricInput): AccountTaskMetric {
+    const startedAt = Math.max(0, Number(input.startedAt) || 0);
+    const dueAt = Math.min(startedAt, Math.max(0, Number(input.dueAt) || startedAt));
+    const metric = createAccountTaskMetric({
+        name: String(input.name || '').trim() || 'scheduler.unknown',
+        priority: input.priority || 'scheduled',
+        queuedAt: dueAt,
+        queueDepthAtSubmit: 0,
+        queueDepthAtStart: 0,
+        dedupeHits: 0,
+    }, input.outcome || 'success', startedAt, input.finishedAt, true);
+    if (metric.outcome === 'cancelled') {
+        metric.runMs = metric.finishedAt - metric.startedAt;
+    }
+    return metric;
 }

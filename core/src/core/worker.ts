@@ -5,11 +5,14 @@ export {};
 const { parentPort, workerData } = require('node:worker_threads');
 
 const {
-    clearPendingAccountTasks,
+    closeAccountTaskQueue,
     getAccountTaskRunnerSnapshot,
+    openAccountTaskQueue,
     setAccountTaskMetricObserver,
     submitAccountTask,
 } = require('../app/account-task-runner');
+const { createScheduledTaskMetric } = require('../app/account-task-metrics');
+const { BackgroundJob } = require('../app/background-job');
 const { TaskPerformanceAggregator } = require('../app/task-performance-aggregator');
 const { executeWorkerApiCall } = require('../app/worker-api-dispatcher');
 const { runClaimedInviteBatch } = require('../app/worker-invite-batch');
@@ -130,6 +133,7 @@ let shutdownStarted: boolean = false;
 let runtimeGeneration: number = 0;
 let lastDailyRunDate: string = '';
 const workerScheduler = createScheduler('worker');
+const friendTickJob = new BackgroundJob();
 const accountTaskPerformance = new TaskPerformanceAggregator();
 const taskMetricsWindowMs = Math.min(
     60 * 60 * 1000,
@@ -159,6 +163,12 @@ const workerApiRegistry = createWorkerApiRegistry({
     getSchedulers: () => ({
         ...getSchedulerRegistrySnapshot(),
         accountTasks: getAccountTaskRunnerSnapshot(),
+        backgroundJobs: {
+            friendRound: {
+                running: friendTickJob.isRunning(),
+                nextRunAt: Number(nextFriendRunAt) || 0,
+            },
+        },
         performance: accountTaskPerformance.snapshot(),
     }),
 });
@@ -252,6 +262,9 @@ function resetUnifiedSchedule(): void {
 }
 
 async function runFarmTick(auto: any): Promise<void> {
+    const dueAt = nextFarmRunAt;
+    const startedAt = Date.now();
+    let outcome: 'success' | 'error' = 'success';
     const farmMs = randomIntervalMs(
         CONFIG.farmCheckIntervalMin || CONFIG.farmCheckInterval || 2000,
         CONFIG.farmCheckIntervalMax || CONFIG.farmCheckInterval || 2000
@@ -277,14 +290,22 @@ async function runFarmTick(auto: any): Promise<void> {
             });
         }
     } catch {
-        // ignore
+        outcome = 'error';
     } finally {
+        accountTaskPerformance.record(createScheduledTaskMetric({
+            name: 'scheduler.farm-tick',
+            priority: 'scheduled',
+            outcome,
+            dueAt,
+            startedAt,
+            finishedAt: Date.now(),
+        }));
         nextFarmRunAt = Date.now() + farmMs;
     }
 }
 
 // ============ 好友统一任务：偷菜、帮助、放虫放草 ============
-async function runFriendTick(auto: any): Promise<void> {
+function runFriendTick(auto: any): boolean {
     const friendMs = randomIntervalMs(
         workerConfig.friendCheckIntervalMin || 12000,
         workerConfig.friendCheckIntervalMax || 15000
@@ -292,17 +313,32 @@ async function runFriendTick(auto: any): Promise<void> {
     // friend 总开关仍控制好友任务总入口；关闭时也要推进到期时间，避免调度器每秒空转。
     if (!auto.friend) {
         nextFriendRunAt = Date.now() + friendMs;
-        return;
+        return false;
     }
 
-    try {
-        // checkFriends 内部保留各自开关、经验上限、黑名单和每日捣乱次数判断。
-        await checkFriends();
-    } catch (e: any) {
-        log('系统', `好友统一任务执行失败: ${e.message}`, { module: 'system', event: '好友统一任务', result: 'error' });
-    } finally {
-        nextFriendRunAt = Date.now() + friendMs;
-    }
+    const dueAt = nextFriendRunAt;
+    const startedAt = Date.now();
+    const started = friendTickJob.start(
+        (signal: AbortSignal) => checkFriends({ signal }),
+        {
+            onError: (e: any) => {
+                log('系统', `好友统一任务执行失败: ${e.message}`, { module: 'system', event: '好友统一任务', result: 'error' });
+            },
+            onSettled: (outcome: 'success' | 'error' | 'cancelled') => {
+                accountTaskPerformance.record(createScheduledTaskMetric({
+                    name: 'scheduler.friend-round',
+                    priority: 'scheduled',
+                    outcome,
+                    dueAt,
+                    startedAt,
+                    finishedAt: Date.now(),
+                }));
+                nextFriendRunAt = Date.now() + friendMs;
+            },
+        },
+    );
+    if (!started) nextFriendRunAt = Date.now() + friendMs;
+    return started;
 }
 
 async function runUnifiedTick(): Promise<void> {
@@ -313,9 +349,8 @@ async function runUnifiedTick(): Promise<void> {
     if (!dueFarm && !dueFriend) return;
 
     const auto = getAutomation();
-    // 串行执行而非并行，避免并发请求过多导致超时
     if (dueFarm) await runFarmTick(auto);
-    if (dueFriend) await runFriendTick(auto);
+    if (!friendTickJob.isRunning() && Date.now() >= nextFriendRunAt) runFriendTick(auto);
 }
 
 function scheduleUnifiedNextTick(): void {
@@ -324,10 +359,10 @@ function scheduleUnifiedNextTick(): void {
     if (!loginReady) return;
 
     const now = Date.now();
-    const nextAt = Math.min(
-        Number(nextFarmRunAt) || (now + 1000),
-        Number(nextFriendRunAt) || (now + 1000)
-    );
+    const friendNextAt = friendTickJob.isRunning()
+        ? Number.POSITIVE_INFINITY
+        : (Number(nextFriendRunAt) || (now + 1000));
+    const nextAt = Math.min(Number(nextFarmRunAt) || (now + 1000), friendNextAt);
     const delayMs = Math.max(1000, nextAt - now); // 最低 1 秒
 
     workerScheduler.setTimeoutTask('unified_next_tick', delayMs, async () => {
@@ -543,6 +578,7 @@ async function startBot(config: any): Promise<void> {
     isRunning = true;
     shutdownStarted = false;
     runtimeGeneration += 1;
+    openAccountTaskQueue();
 
     const { code, platform, systemTimeZone, systemServerUrl, systemClientVersion, inviteBatch } = config;
 
@@ -739,11 +775,12 @@ function quiesceBot(reason: string): void {
     isRunning = false;
     loginReady = false;
     stopUnifiedScheduler();
+    friendTickJob.abort();
     stopFarmCheckLoop();
     stopFriendCheckLoop();
     stopDailyRoutineTimer();
     cleanupTaskSystem();
-    clearPendingAccountTasks(reason);
+    closeAccountTaskQueue(reason);
     flushTaskPerformanceMetrics();
     workerScheduler.clearAll();
     detachRuntimeListeners();
