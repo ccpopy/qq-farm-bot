@@ -2,6 +2,7 @@
  * 好友巡查调度 - 循环管理、每日重置、经验限制、自动接受好友、启动捣乱
  */
 
+const { submitAccountTask } = require('../../app/account-task-runner');
 const { CONFIG } = require('../../config/config');
 const crypto = require('node:crypto');
 const { getUserState, networkEvents } = require('../../utils/network');
@@ -46,7 +47,6 @@ const {
 } = require('./visit-strategy');
 const { getFriendDogState, flushFriendPetCacheNow } = require('./pet-cache');
 
-// 延迟引用 pet-sync，它反向依赖本模块的 isFriendCheckRunning
 function petSyncRef(): any {
     return require('./pet-sync');
 }
@@ -271,12 +271,6 @@ interface CheckFriendsOptions {
     ignoreExpLimit?: boolean;
 }
 
-// 好友巡查与面板的好友天气扫描共用“进入好友农场”这一游戏状态，
-// 扫描靠这个标志让位，保证好友任务优先执行。
-export function isFriendCheckRunning(): boolean {
-    return isCheckingFriends;
-}
-
 export async function checkFriends(options: CheckFriendsOptions = {}): Promise<boolean> {
     const state: any = getUserState();
     if (!isAutomationOn('friend')) return false;
@@ -304,7 +298,10 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
     checkDailyReset();
 
     try {
-        const friendsReply: any = await getAllFriends();
+        const friendsReply: any = await submitAccountTask('friend.scan.list', getAllFriends, {
+            priority: 'scheduled',
+            dedupeKey: 'friend.scan.list',
+        });
         // 巡查结果同时刷新面板好友列表缓存，避免页面再次请求同一份列表。
         cacheFriendsListFromReply(friendsReply);
         const friends: any[] = extractReplyFriends(friendsReply);
@@ -362,7 +359,11 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
 
             for (const friend of stealFriends) {
                 try {
-                    await visitFriendForSteal(friend, totalActions, state.gid, state.accountId);
+                    await submitAccountTask(
+                        `friend.steal:${friend.gid}`,
+                        () => visitFriendForSteal(friend, totalActions, state.gid, state.accountId),
+                        { priority: 'scheduled' },
+                    );
                 } catch {
                     // 单个好友失败不影响整体
                 }
@@ -373,7 +374,10 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
         // 偷菜后自动出售
         if (totalActions.steal > 0) {
             try {
-                await sellAllFruits();
+                await submitAccountTask('friend.scan.sell', sellAllFruits, {
+                    priority: 'scheduled',
+                    dedupeKey: 'friend.scan.sell',
+                });
             } catch {
                 // ignore
             }
@@ -415,8 +419,11 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                 log('好友', `批量帮助第 ${i + 1}/${helpFriends.length} 个好友: ${friend.name}`, { module: 'friend', event: '批量帮助开始', index: i + 1, total: helpFriends.length, friendName: friend.name });
 
                 try {
-                    // await visitFriendForHelp(friend, totalActions, state.gid, state.accountId);
-                    const result: any = await visitFriendForHelp(friend, totalActions, state.gid, state.accountId, ignoreExpLimit);
+                    const result: any = await submitAccountTask(
+                        `friend.help:${friend.gid}`,
+                        () => visitFriendForHelp(friend, totalActions, state.gid, state.accountId, ignoreExpLimit),
+                        { priority: 'scheduled' },
+                    );
                     const resultStatus: string = String(result?.status || 'no_action');
                     if (resultStatus === 'skipped_exp_limit') {
                         log('好友', `批量帮助跳过：${friend.name}，经验已达上限`, {
@@ -545,7 +552,11 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                     }
 
                     try {
-                        await visitFriend(friend, totalActions, state.gid, state.accountId);
+                        await submitAccountTask(
+                            `friend.bad:${friend.gid}`,
+                            () => visitFriend(friend, totalActions, state.gid, state.accountId),
+                            { priority: 'scheduled' },
+                        );
                     } catch {
                         // 单个好友失败不影响整体
                     }
@@ -612,9 +623,13 @@ export function startFriendCheckLoop(options: StartOptions = {}): void {
     }
 
     // 启动时检查一次待处理的好友申请
-    friendScheduler.setTimeoutTask('friend_check_bootstrap_applications', 3000, () => checkAndAcceptApplications());
+    friendScheduler.setTimeoutTask('friend_check_bootstrap_applications', 3000, () => {
+        return submitAccountTask('friend.applications.check', checkAndAcceptApplications, {
+            priority: 'event',
+            dedupeKey: 'friend.applications.check',
+        });
+    });
 
-    // 好友宠物每日同步（自带启动错峰与定时重试）
     petSyncRef().startFriendPetSyncTimer();
 }
 
@@ -636,8 +651,6 @@ export function refreshFriendCheckLoop(delayMs: number = 200): void {
 
 // ============ 自动同意好友申请 (微信同玩) ============
 
-let applicationQueue: Promise<void> = Promise.resolve();
-
 function getApplicationFilterConfig(): any {
     return {
         minLevel: getAutoAcceptFriendMinLevel(),
@@ -650,11 +663,13 @@ function getApplicationFilterConfig(): any {
 }
 
 function enqueueApplications(applications: any[]): void {
-    applicationQueue = applicationQueue
-        .then(() => processFriendApplications(applications))
-        .catch((e: any) => {
-            logWarn('申请', `处理好友申请失败: ${e && e.message ? e.message : e}`);
-        });
+    submitAccountTask(
+        'friend.applications.process',
+        () => processFriendApplications(applications),
+        { priority: 'event' },
+    ).catch((e: any) => {
+        logWarn('申请', `处理好友申请失败: ${e && e.message ? e.message : e}`);
+    });
 }
 
 /**

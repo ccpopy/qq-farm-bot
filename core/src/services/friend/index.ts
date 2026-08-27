@@ -3,6 +3,9 @@
  */
 
 export {
+    acknowledgeKnownFriendGids,
+    flushPendingKnownFriendGids,
+    reapplyPendingKnownFriendGids,
     removeKnownFriendGid,
     syncKnownFriendGidsFromFriends,
     syncKnownFriendGidsFromRecentVisitors,
@@ -23,7 +26,6 @@ export {
 export {
     checkFriends,
     getOperationLimits,
-    isFriendCheckRunning,
     isHelpExpLimitReached,
     onFriendApplicationReceived,
     refreshFriendCheckLoop,
