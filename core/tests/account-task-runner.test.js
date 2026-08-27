@@ -231,3 +231,68 @@ test('snapshot reports the active task and queued work', async () => {
     gate.resolve();
     await Promise.all([active, waiting]);
 });
+
+test('task metrics report queue, execution, and dedupe timings', async () => {
+    let now = 100;
+    const metrics = [];
+    const runner = new AccountTaskRunner({
+        now: () => now,
+        onMetric: metric => metrics.push(metric),
+    });
+    const gate = deferred();
+
+    const active = runner.submit('active', async () => {
+        now = 130;
+        await gate.promise;
+    });
+    await new Promise(setImmediate);
+
+    const queued = runner.submit('friend.help:123456', () => {
+        now = 230;
+        return 'done';
+    }, { priority: 'scheduled', dedupeKey: 'friend.help:123456' });
+    const duplicate = runner.submit('friend.help:123456', () => 'duplicate', {
+        priority: 'event',
+        dedupeKey: 'friend.help:123456',
+    });
+
+    now = 190;
+    gate.resolve();
+    await active;
+    assert.equal(await queued, 'done');
+    assert.equal(await duplicate, 'done');
+
+    const metric = metrics.find(item => item.name === 'friend.help:123456');
+    assert.equal(metric.priority, 'event');
+    assert.equal(metric.outcome, 'success');
+    assert.equal(metric.waitMs, 60);
+    assert.equal(metric.runMs, 40);
+    assert.equal(metric.totalMs, 100);
+    assert.equal(metric.dedupeHits, 1);
+    assert.equal(metric.queueDepthAtSubmit, 1);
+});
+
+test('cleared tasks emit cancelled metrics', async () => {
+    let now = 10;
+    const metrics = [];
+    const runner = new AccountTaskRunner({
+        now: () => now,
+        onMetric: metric => metrics.push(metric),
+    });
+    const gate = deferred();
+    const active = runner.submit('active', () => gate.promise);
+    await new Promise(setImmediate);
+    const waiting = runner.submit('waiting', () => true);
+
+    now = 45;
+    runner.clearPending('stopped');
+    await assert.rejects(waiting, /stopped/);
+
+    const metric = metrics.find(item => item.name === 'waiting');
+    assert.equal(metric.outcome, 'cancelled');
+    assert.equal(metric.waitMs, 35);
+    assert.equal(metric.runMs, 0);
+
+    gate.resolve();
+    await active;
+});

@@ -32,6 +32,7 @@ interface WorkerManagerOptions {
     defaultApiCallTimeoutMs?: number;
     onStatusSync?: (accountId: string, status: any, accountName?: string) => void;
     onWorkerLog?: (entry: any, accountId: string, accountName?: string) => void;
+    onTaskMetrics?: (accountId: string, snapshot: any) => void;
 }
 
 function createWorkerManager(options: WorkerManagerOptions) {
@@ -55,6 +56,7 @@ function createWorkerManager(options: WorkerManagerOptions) {
         deleteAccount,
         onStatusSync,
         onWorkerLog,
+        onTaskMetrics,
     } = options;
     const managerScheduler = createScheduler('worker_manager');
     const useThreadRuntime = runtimeMode === 'thread' && !(processRef as any).pkg && typeof WorkerThread === 'function';
@@ -332,6 +334,8 @@ function createWorkerManager(options: WorkerManagerOptions) {
             if (typeof onWorkerLog === 'function') {
                 onWorkerLog(logEntry, accountId, worker.name);
             }
+        } else if (msg.type === 'task_metrics') {
+            if (typeof onTaskMetrics === 'function') onTaskMetrics(accountId, msg.data);
         } else if (msg.type === 'error') {
             const workerError = errorFromWorkerPayload(msg.error);
             log('错误', `账号[${accountId}]进程报错: ${workerError.message}`, {

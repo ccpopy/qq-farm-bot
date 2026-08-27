@@ -7,8 +7,10 @@ const { parentPort, workerData } = require('node:worker_threads');
 const {
     clearPendingAccountTasks,
     getAccountTaskRunnerSnapshot,
+    setAccountTaskMetricObserver,
     submitAccountTask,
 } = require('../app/account-task-runner');
+const { TaskPerformanceAggregator } = require('../app/task-performance-aggregator');
 const { executeWorkerApiCall } = require('../app/worker-api-dispatcher');
 const { runClaimedInviteBatch } = require('../app/worker-invite-batch');
 const { createWorkerApiRegistry } = require('../app/worker-api-registry');
@@ -128,6 +130,23 @@ let shutdownStarted: boolean = false;
 let runtimeGeneration: number = 0;
 let lastDailyRunDate: string = '';
 const workerScheduler = createScheduler('worker');
+const accountTaskPerformance = new TaskPerformanceAggregator();
+const taskMetricsWindowMs = Math.min(
+    60 * 60 * 1000,
+    Math.max(60 * 1000, Number(process.env.FARM_PERF_WINDOW_MS) || 5 * 60 * 1000),
+);
+
+setAccountTaskMetricObserver((metric: any) => accountTaskPerformance.record(metric));
+
+function flushTaskPerformanceMetrics(): void {
+    const snapshot = accountTaskPerformance.drain();
+    if (snapshot) sendToMaster({ type: 'task_metrics', data: snapshot });
+}
+
+workerScheduler.setIntervalTask('task_metrics_flush', taskMetricsWindowMs, flushTaskPerformanceMetrics, {
+    preventOverlap: true,
+});
+
 const workerApiRegistry = createWorkerApiRegistry({
     applyRuntimeConfigSnapshot(snapshot: any) {
         return { appliedRevision: applyRuntimeConfig(snapshot, true) };
@@ -140,6 +159,7 @@ const workerApiRegistry = createWorkerApiRegistry({
     getSchedulers: () => ({
         ...getSchedulerRegistrySnapshot(),
         accountTasks: getAccountTaskRunnerSnapshot(),
+        performance: accountTaskPerformance.snapshot(),
     }),
 });
 
@@ -723,8 +743,9 @@ function quiesceBot(reason: string): void {
     stopFriendCheckLoop();
     stopDailyRoutineTimer();
     cleanupTaskSystem();
-    workerScheduler.clearAll();
     clearPendingAccountTasks(reason);
+    flushTaskPerformanceMetrics();
+    workerScheduler.clearAll();
     detachRuntimeListeners();
     cleanup(reason);
     syncStatus(true);

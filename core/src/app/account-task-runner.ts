@@ -1,8 +1,14 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import type {
+    AccountTaskMetric,
+    AccountTaskMetricObserver,
+    AccountTaskMetricSource,
+    AccountTaskPriority,
+} from './account-task-metrics';
 
 export {};
 
-type AccountTaskPriority = 'interactive' | 'event' | 'scheduled' | 'maintenance';
+const { createAccountTaskMetric } = require('./account-task-metrics');
 
 interface AccountTaskOptions {
     priority?: AccountTaskPriority;
@@ -12,6 +18,7 @@ interface AccountTaskOptions {
 interface AccountTaskRunnerOptions {
     now?: () => number;
     agingIntervalMs?: number;
+    onMetric?: AccountTaskMetricObserver;
 }
 
 interface QueuedTask<T> {
@@ -19,7 +26,11 @@ interface QueuedTask<T> {
     priority: AccountTaskPriority;
     dedupeKey: string;
     queuedAt: number;
+    startedAt: number;
     sequence: number;
+    queueDepthAtSubmit: number;
+    queueDepthAtStart: number;
+    dedupeHits: number;
     run: () => Promise<T> | T;
     promise: Promise<T>;
     resolve: (value: T | PromiseLike<T>) => void;
@@ -41,6 +52,7 @@ class AccountTaskRunner {
     private readonly executionContext = new AsyncLocalStorage<QueuedTask<any>>();
     private readonly now: () => number;
     private readonly agingIntervalMs: number;
+    private onMetric: AccountTaskMetricObserver | null;
     private activeTask: QueuedTask<any> | null = null;
     private sequence = 0;
     private drainScheduled = false;
@@ -48,6 +60,11 @@ class AccountTaskRunner {
     constructor(options: AccountTaskRunnerOptions = {}) {
         this.now = options.now || Date.now;
         this.agingIntervalMs = Math.max(1, Number(options.agingIntervalMs) || DEFAULT_AGING_INTERVAL_MS);
+        this.onMetric = typeof options.onMetric === 'function' ? options.onMetric : null;
+    }
+
+    setMetricObserver(observer: AccountTaskMetricObserver | null): void {
+        this.onMetric = typeof observer === 'function' ? observer : null;
     }
 
     submit<T>(name: string, run: () => Promise<T> | T, options: AccountTaskOptions = {}): Promise<T> {
@@ -56,7 +73,7 @@ class AccountTaskRunner {
         if (typeof run !== 'function') throw new Error(`账号任务 ${taskName} 缺少执行函数`);
 
         if (this.executionContext.getStore() === this.activeTask) {
-            return Promise.resolve().then(run);
+            return this.runInline(taskName, run, options.priority || 'scheduled');
         }
 
         const dedupeKey = String(options.dedupeKey || '').trim();
@@ -67,6 +84,7 @@ class AccountTaskRunner {
                 if (PRIORITY_RANK[priority] < PRIORITY_RANK[queued.priority]) {
                     queued.priority = priority;
                 }
+                queued.dedupeHits += 1;
                 return queued.promise as Promise<T>;
             }
         }
@@ -82,7 +100,11 @@ class AccountTaskRunner {
             priority: options.priority || 'scheduled',
             dedupeKey,
             queuedAt: this.now(),
+            startedAt: 0,
             sequence: this.sequence++,
+            queueDepthAtSubmit: this.queue.length + 1,
+            queueDepthAtStart: 0,
+            dedupeHits: 0,
             run,
             promise,
             resolve,
@@ -98,7 +120,11 @@ class AccountTaskRunner {
     clearPending(reason = '账号任务已停止'): number {
         const pending = this.queue.splice(0);
         this.queuedByDedupeKey.clear();
-        for (const task of pending) task.reject(new Error(reason));
+        const finishedAt = this.now();
+        for (const task of pending) {
+            this.emitMetric(task, 'cancelled', finishedAt, finishedAt);
+            task.reject(new Error(reason));
+        }
         return pending.length;
     }
 
@@ -109,6 +135,7 @@ class AccountTaskRunner {
                     name: this.activeTask.name,
                     priority: this.activeTask.priority,
                     queuedAt: this.activeTask.queuedAt,
+                    startedAt: this.activeTask.startedAt,
                 }
                 : null,
             queued: this.queue.map(task => ({
@@ -156,18 +183,70 @@ class AccountTaskRunner {
         if (!task) return;
 
         this.activeTask = task;
+        task.startedAt = this.now();
+        task.queueDepthAtStart = this.queue.length;
         if (task.dedupeKey && this.queuedByDedupeKey.get(task.dedupeKey) === task) {
             this.queuedByDedupeKey.delete(task.dedupeKey);
         }
 
+        let outcome: AccountTaskMetric['outcome'] = 'success';
         try {
-            task.resolve(await this.executionContext.run(task, task.run));
+            const result = await this.executionContext.run(task, task.run);
+            task.resolve(result);
         } catch (error) {
+            outcome = 'error';
             task.reject(error);
         } finally {
+            this.emitMetric(task, outcome, task.startedAt, this.now());
             this.activeTask = null;
             this.scheduleDrain();
         }
+    }
+
+    private runInline<T>(
+        name: string,
+        run: () => Promise<T> | T,
+        priority: AccountTaskPriority,
+    ): Promise<T> {
+        const startedAt = this.now();
+        return Promise.resolve()
+            .then(run)
+            .then((result) => {
+                const finishedAt = this.now();
+                this.emitMetric({
+                    name,
+                    priority,
+                    queuedAt: startedAt,
+                    queueDepthAtSubmit: this.queue.length,
+                    queueDepthAtStart: this.queue.length,
+                    dedupeHits: 0,
+                }, 'success', startedAt, finishedAt, true);
+                return result;
+            }, (error) => {
+                const finishedAt = this.now();
+                this.emitMetric({
+                    name,
+                    priority,
+                    queuedAt: startedAt,
+                    queueDepthAtSubmit: this.queue.length,
+                    queueDepthAtStart: this.queue.length,
+                    dedupeHits: 0,
+                }, 'error', startedAt, finishedAt, true);
+                throw error;
+            });
+    }
+
+    private emitMetric(
+        task: AccountTaskMetricSource,
+        outcome: AccountTaskMetric['outcome'],
+        startedAt: number,
+        finishedAt: number,
+        inline = false,
+    ): void {
+        if (!this.onMetric) return;
+        try {
+            this.onMetric(createAccountTaskMetric(task, outcome, startedAt, finishedAt, inline));
+        } catch {}
     }
 }
 
@@ -189,9 +268,14 @@ function getAccountTaskRunnerSnapshot(): any {
     return accountTaskRunner.getSnapshot();
 }
 
+function setAccountTaskMetricObserver(observer: AccountTaskMetricObserver | null): void {
+    accountTaskRunner.setMetricObserver(observer);
+}
+
 module.exports = {
     AccountTaskRunner,
     clearPendingAccountTasks,
     getAccountTaskRunnerSnapshot,
+    setAccountTaskMetricObserver,
     submitAccountTask,
 };
