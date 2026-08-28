@@ -842,16 +842,21 @@ async function runFertilizerByConfig(plantedLands: any[] = [], options: { skipNo
         return { normal: 0, organic: 0 };
     }
     let latestLands: any[] = [];
+    let hasFreshLandSnapshot = false;
     const landTypeById = new Map<number, string>();
-    try {
-        const latest = await getAllLands();
-        latestLands = Array.isArray(latest && latest.lands) ? latest.lands : [];
+    const applyLandSnapshot = (reply: any): void => {
+        latestLands = Array.isArray(reply && reply.lands) ? reply.lands : [];
+        landTypeById.clear();
         for (const land of latestLands) {
             if (!land) continue;
             const landId = toNum(land.id);
             if (!landId) continue;
             landTypeById.set(landId, getLandTypeByLevel(land.level));
         }
+        hasFreshLandSnapshot = true;
+    };
+    try {
+        applyLandSnapshot(await getAllLands());
     } catch (e: any) {
         logWarn('施肥', `${reasonLabel}：获取土地信息失败，按已知地块继续 ${e.message}`, {
             module: 'farm',
@@ -859,6 +864,14 @@ async function runFertilizerByConfig(plantedLands: any[] = [], options: { skipNo
             result: 'error',
             reason,
         });
+    }
+
+    if (!hasFreshLandSnapshot && fertilizerConfig === 'smart') {
+        try {
+            applyLandSnapshot(await getAllLands());
+        } catch (e: any) {
+            logWarn('施肥', `获取全农场地块失败 ${e.message}`);
+        }
     }
 
     const isAllLandTypesSelected: boolean = selectedLandTypes.length === ALL_FERTILIZER_LAND_TYPES.length;
@@ -924,11 +937,15 @@ async function runFertilizerByConfig(plantedLands: any[] = [], options: { skipNo
     else if (fertilizerConfig === 'smart') {
         let organicTargets: number[] = [];
         const smartSeconds = toNum(automation.fertilizer_smart_seconds) || 300;
-        try {
-            const latest = await getAllLands();
-            organicTargets = getFastMatureLands(latest && latest.lands, smartSeconds);
-        } catch (e: any) {
-            logWarn('施肥', `获取全农场地块失败 ${e.message}`);
+        if (hasFreshLandSnapshot && fertilizedNormal === 0) {
+            organicTargets = getFastMatureLands(latestLands, smartSeconds);
+        } else if (fertilizedNormal > 0) {
+            try {
+                const latest = await getAllLands();
+                organicTargets = getFastMatureLands(latest && latest.lands, smartSeconds);
+            } catch (e: any) {
+                logWarn('施肥', `获取全农场地块失败 ${e.message}`);
+            }
         }
 
         if (organicTargets.length > 0) {

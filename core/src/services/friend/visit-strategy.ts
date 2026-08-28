@@ -27,6 +27,7 @@ const { recordOperation } = require('../stats');
 const { sellAllFruits } = require('../warehouse');
 const {
     getAllFriends,
+    clearAllFriendsCache,
     delFriend,
     enterFriendFarm,
     leaveFriendFarm,
@@ -1088,11 +1089,13 @@ export function clearFriendsListCache(): void {
     friendsListCache = null;
     friendsListCacheTime = 0;
     recentHelp.clear();
+    clearAllFriendsCache();
 }
 
 export function removeFriendFromFriendsListCache(friendGid: any): void {
     const gid: number = toNum(friendGid);
     if (!gid) return;
+    clearAllFriendsCache();
     if (!Array.isArray(friendsListCache)) return;
     const next: any[] = friendsListCache.filter((friend: any) => toNum(friend.gid) !== gid);
     if (next.length !== friendsListCache.length) {

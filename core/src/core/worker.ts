@@ -11,7 +11,7 @@ const {
     setAccountTaskMetricObserver,
     submitAccountTask,
 } = require('../app/account-task-runner');
-const { createScheduledTaskMetric } = require('../app/account-task-metrics');
+const { createScheduledTaskMetric, mergeTaskOutcomes } = require('../app/account-task-metrics');
 const { BackgroundJob } = require('../app/background-job');
 const { TaskPerformanceAggregator } = require('../app/task-performance-aggregator');
 const { executeWorkerApiCall } = require('../app/worker-api-dispatcher');
@@ -318,10 +318,14 @@ function runFriendTick(auto: any): boolean {
 
     const dueAt = nextFriendRunAt;
     const startedAt = Date.now();
+    let roundOutcome: 'success' | 'error' | 'cancelled' = 'success';
     const started = friendTickJob.start(
         (signal: AbortSignal) => checkFriends({
             signal,
-            onRoundMetric: (metric: any) => accountTaskPerformance.recordFriendRound(metric),
+            onRoundMetric: (metric: any) => {
+                roundOutcome = metric.outcome;
+                accountTaskPerformance.recordFriendRound(metric);
+            },
         }),
         {
             onError: (e: any) => {
@@ -331,7 +335,7 @@ function runFriendTick(auto: any): boolean {
                 accountTaskPerformance.record(createScheduledTaskMetric({
                     name: 'scheduler.friend-round',
                     priority: 'scheduled',
-                    outcome,
+                    outcome: mergeTaskOutcomes(outcome, roundOutcome),
                     dueAt,
                     startedAt,
                     finishedAt: Date.now(),

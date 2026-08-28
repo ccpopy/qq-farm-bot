@@ -314,6 +314,24 @@ test('inline task metrics retain their parent task relationship', async () => {
     assert.equal(phase.parentTaskName, 'farm.check');
 });
 
+test('a handled inline phase failure marks its parent task as partial', async () => {
+    const metrics = [];
+    const runner = new AccountTaskRunner({ onMetric: metric => metrics.push(metric) });
+
+    const result = await runner.submit('farm.check', async () => {
+        try {
+            await runner.runStep('farm.phase.harvest', async () => {
+                throw new Error('harvest failed');
+            });
+        } catch {}
+        return false;
+    });
+
+    assert.equal(result, false);
+    assert.equal(metrics.find(metric => metric.name === 'farm.phase.harvest').outcome, 'error');
+    assert.equal(metrics.find(metric => metric.name === 'farm.check').outcome, 'partial');
+});
+
 test('task steps run directly without creating a queue when no parent task exists', async () => {
     const metrics = [];
     const runner = new AccountTaskRunner({ onMetric: metric => metrics.push(metric) });

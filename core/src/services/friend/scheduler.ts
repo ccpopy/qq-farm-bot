@@ -326,7 +326,11 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
     let roundOutcome: FriendRoundMetric['outcome'] = 'success';
 
     try {
-        const friendsReply: any = await getAllFriends();
+        const friendsReply: any = await submitAccountTask(
+            'friend.phase.get-all-friends',
+            () => getAllFriends(),
+            { priority: 'scheduled', dedupeKey: 'friend.phase.get-all-friends' },
+        );
         if (signal?.aborted) return false;
         // 巡查结果同时刷新面板好友列表缓存，避免页面再次请求同一份列表。
         cacheFriendsListFromReply(friendsReply);

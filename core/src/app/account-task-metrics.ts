@@ -3,7 +3,7 @@ export type AccountTaskPriority = 'interactive' | 'event' | 'scheduled' | 'maint
 export interface AccountTaskMetric {
     name: string;
     priority: AccountTaskPriority;
-    outcome: 'success' | 'error' | 'cancelled';
+    outcome: 'success' | 'partial' | 'error' | 'cancelled';
     taskId?: string;
     requestId?: string;
     parentTaskId?: string;
@@ -38,6 +38,15 @@ export interface AccountTaskMetricSource {
 }
 
 export type AccountTaskMetricObserver = (metric: AccountTaskMetric) => void;
+
+export function mergeTaskOutcomes(
+    ...outcomes: Array<AccountTaskMetric['outcome'] | undefined>
+): AccountTaskMetric['outcome'] {
+    if (outcomes.includes('cancelled')) return 'cancelled';
+    if (outcomes.includes('error')) return 'error';
+    if (outcomes.includes('partial')) return 'partial';
+    return 'success';
+}
 
 interface ScheduledTaskMetricInput {
     name: string;

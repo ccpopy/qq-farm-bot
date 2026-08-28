@@ -2,6 +2,7 @@ export {};
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const { version } = require('../../package.json');
 const { getDataFile } = require('../config/runtime-paths');
 
@@ -9,10 +10,30 @@ interface PerformanceMetricsStoreOptions {
     directory?: string;
     now?: () => number;
     retentionDays?: number;
+    buildSha?: string;
 }
 
 const METRICS_FILE_PATTERN = /^task-metrics-(\d{4}-\d{2}-\d{2})\.jsonl$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+function resolveBuildSha(): string {
+    const configured = [
+        process.env.FARM_BUILD_SHA,
+        process.env.GIT_COMMIT,
+        process.env.SOURCE_VERSION,
+        process.env.COMMIT_SHA,
+    ].map(value => String(value || '').trim()).find(Boolean);
+    if (configured) return configured;
+    try {
+        return String(execFileSync('git', ['rev-parse', 'HEAD'], {
+            cwd: process.cwd(),
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+        })).trim() || 'unknown';
+    } catch {
+        return 'unknown';
+    }
+}
 
 function boundedInteger(value: unknown, fallback: number, min: number, max: number): number {
     const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -23,6 +44,7 @@ function boundedInteger(value: unknown, fallback: number, min: number, max: numb
 class PerformanceMetricsStore {
     readonly directory: string;
     readonly retentionDays: number;
+    readonly buildSha: string;
     private readonly now: () => number;
     private lastCleanupAt = 0;
 
@@ -35,6 +57,7 @@ class PerformanceMetricsStore {
             90,
         );
         this.now = options.now || Date.now;
+        this.buildSha = String(options.buildSha || resolveBuildSha());
     }
 
     append(record: any): void {
@@ -42,13 +65,19 @@ class PerformanceMetricsStore {
         fs.mkdirSync(this.directory, { recursive: true });
         const timestamp = Number(record.windowEndedAt) || this.now();
         const filePath = path.join(this.directory, `task-metrics-${this.dateKey(timestamp)}.jsonl`);
-        fs.appendFileSync(filePath, `${JSON.stringify({ ...record, schemaVersion: 1, botVersion: version })}\n`, 'utf8');
+        fs.appendFileSync(filePath, `${JSON.stringify({
+            ...record,
+            schemaVersion: 1,
+            botVersion: version,
+            buildSha: this.buildSha,
+        })}\n`, 'utf8');
         this.cleanupExpiredFiles();
     }
 
     getStatus(): any {
         return {
             enabled: true,
+            buildSha: this.buildSha,
             directory: this.directory,
             retentionDays: this.retentionDays,
             files: this.listFiles().map(file => ({
@@ -102,4 +131,5 @@ class PerformanceMetricsStore {
 module.exports = {
     PerformanceMetricsStore,
     boundedInteger,
+    resolveBuildSha,
 };

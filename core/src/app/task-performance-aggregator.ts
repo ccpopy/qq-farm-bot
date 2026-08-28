@@ -17,6 +17,7 @@ interface TaskGroup {
     inline: boolean;
     outcomes: {
         success: number;
+        partial: number;
         error: number;
         cancelled: number;
     };
@@ -125,7 +126,7 @@ class TaskPerformanceAggregator {
                 name,
                 priority,
                 inline,
-                outcomes: { success: 0, error: 0, cancelled: 0 },
+                outcomes: { success: 0, partial: 0, error: 0, cancelled: 0 },
                 dedupeHits: 0,
                 maxQueueDepth: 0,
                 waitMs: createHistogram(),
@@ -135,7 +136,7 @@ class TaskPerformanceAggregator {
             this.groups.set(key, group);
         }
 
-        const outcome = metric.outcome === 'error' || metric.outcome === 'cancelled'
+        const outcome = metric.outcome === 'partial' || metric.outcome === 'error' || metric.outcome === 'cancelled'
             ? metric.outcome
             : 'success';
         group.outcomes[outcome] += 1;

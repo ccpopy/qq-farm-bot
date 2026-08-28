@@ -10,7 +10,7 @@ test('performance metric windows are appended to dedicated ndjson files', (t) =>
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qq-farm-performance-'));
     t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
     const now = Date.UTC(2026, 7, 27, 12, 0, 0);
-    const store = new PerformanceMetricsStore({ directory: dir, now: () => now });
+    const store = new PerformanceMetricsStore({ directory: dir, now: () => now, buildSha: 'abcdef1234567890' });
 
     store.append({
         kind: 'account_tasks',
@@ -31,6 +31,7 @@ test('performance metric windows are appended to dedicated ndjson files', (t) =>
     assert.equal(record.accountId, 'account-a');
     assert.equal(record.schemaVersion, 1);
     assert.equal(typeof record.botVersion, 'string');
+    assert.equal(record.buildSha, 'abcdef1234567890');
 });
 
 test('friend round windows are persisted without task histogram samples', (t) => {

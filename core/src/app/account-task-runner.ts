@@ -39,6 +39,7 @@ interface QueuedTask<T> {
     queueDepthAtSubmit: number;
     queueDepthAtStart: number;
     dedupeHits: number;
+    childErrorCount: number;
     run: () => Promise<T> | T;
     promise: Promise<T>;
     resolve: (value: T | PromiseLike<T>) => void;
@@ -138,6 +139,7 @@ class AccountTaskRunner {
             queueDepthAtSubmit: this.queue.length + 1,
             queueDepthAtStart: 0,
             dedupeHits: 0,
+            childErrorCount: 0,
             run,
             promise,
             resolve,
@@ -247,7 +249,8 @@ class AccountTaskRunner {
             outcome = 'error';
             task.reject(error);
         } finally {
-            this.emitMetric(task, outcome, task.startedAt, this.now());
+            const metricOutcome = outcome === 'success' && task.childErrorCount > 0 ? 'partial' : outcome;
+            this.emitMetric(task, metricOutcome, task.startedAt, this.now());
             this.activeTask = null;
             this.scheduleDrain();
         }
@@ -281,6 +284,7 @@ class AccountTaskRunner {
                 return result;
             }, (error) => {
                 const finishedAt = this.now();
+                if (parentTask) parentTask.childErrorCount += 1;
                 this.emitMetric(source, 'error', startedAt, finishedAt, true);
                 throw error;
             });

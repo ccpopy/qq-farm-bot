@@ -48,15 +48,19 @@ async function runFarmCheck(): Promise<boolean> {
         return !!(result && result.hadWork);
     } catch (err: any) {
         logWarn('巡田', `检查失败: ${err.message}`);
-        return false;
+        throw err;
     }
 }
 
 async function checkFarm(options: { priority?: 'event' | 'scheduled' } = {}): Promise<boolean> {
-    return submitAccountTask('farm.check', runFarmCheck, {
-        priority: options.priority || 'scheduled',
-        dedupeKey: 'farm.check',
-    });
+    try {
+        return await submitAccountTask('farm.check', runFarmCheck, {
+            priority: options.priority || 'scheduled',
+            dedupeKey: 'farm.check',
+        });
+    } catch {
+        return false;
+    }
 }
 
 /**

@@ -38,7 +38,7 @@ test('task performance metrics are grouped without high-cardinality numeric suff
     assert.equal(snapshot.taskCount, 2);
     assert.equal(snapshot.tasks.length, 1);
     assert.equal(snapshot.tasks[0].name, 'friend.help:*');
-    assert.deepEqual(snapshot.tasks[0].outcomes, { success: 1, error: 1, cancelled: 0 });
+    assert.deepEqual(snapshot.tasks[0].outcomes, { success: 1, partial: 0, error: 1, cancelled: 0 });
     assert.equal(snapshot.tasks[0].waitMs.sum, 42);
     assert.equal(snapshot.tasks[0].runMs.max, 120);
     assert.equal(snapshot.tasks[0].totalMs.count, 2);
@@ -79,6 +79,15 @@ test('cancelled scheduled task metrics retain time already spent running', () =>
     assert.equal(metric.waitMs, 450);
     assert.equal(metric.runMs, 2000);
     assert.equal(metric.totalMs, 2450);
+});
+
+test('scheduled outcome merging preserves detail errors and cancellation', () => {
+    const { mergeTaskOutcomes } = require('../dist/app/account-task-metrics');
+
+    assert.equal(mergeTaskOutcomes('success', 'error'), 'error');
+    assert.equal(mergeTaskOutcomes('success', 'partial'), 'partial');
+    assert.equal(mergeTaskOutcomes('error', 'cancelled'), 'cancelled');
+    assert.equal(mergeTaskOutcomes('success', 'success'), 'success');
 });
 
 test('slow task samples keep bounded causal identifiers without exposing numeric task suffixes', () => {
