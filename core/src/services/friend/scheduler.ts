@@ -270,6 +270,25 @@ interface CheckFriendsOptions {
     onlyBad?: boolean;
     ignoreExpLimit?: boolean;
     signal?: AbortSignal;
+    onRoundMetric?: (metric: FriendRoundMetric) => void;
+}
+
+interface FriendOperationCounts {
+    steal: number;
+    help: number;
+    bad: number;
+}
+
+interface FriendRoundMetric {
+    startedAt: number;
+    finishedAt: number;
+    outcome: 'success' | 'error' | 'cancelled';
+    friendCount: number;
+    candidateCount: number;
+    processedCount: number;
+    deferredCount: number;
+    candidates: FriendOperationCounts;
+    processed: FriendOperationCounts;
 }
 
 export async function checkFriends(options: CheckFriendsOptions = {}): Promise<boolean> {
@@ -300,6 +319,11 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
 
     isCheckingFriends = true;
     checkDailyReset();
+    const roundStartedAt = Date.now();
+    const candidates: FriendOperationCounts = { steal: 0, help: 0, bad: 0 };
+    const processed: FriendOperationCounts = { steal: 0, help: 0, bad: 0 };
+    let friendCount = 0;
+    let roundOutcome: FriendRoundMetric['outcome'] = 'success';
 
     try {
         const friendsReply: any = await getAllFriends();
@@ -307,6 +331,7 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
         // 巡查结果同时刷新面板好友列表缓存，避免页面再次请求同一份列表。
         cacheFriendsListFromReply(friendsReply);
         const friends: any[] = extractReplyFriends(friendsReply);
+        friendCount = friends.length;
         if (friends.length === 0) {
             log('好友', '没有好友', { module: 'friend', event: '好友扫描', result: 'empty' });
             return false;
@@ -350,6 +375,8 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
             const helpB: number = b.dryNum + b.weedNum + b.insectNum;
             return helpB - helpA;
         });
+        candidates.steal = stealFriends.length;
+        candidates.help = helpFriends.length;
 
         const totalActions: any = { steal: 0, farming: 0, putBug: 0, putWeed: 0 };
 
@@ -369,6 +396,8 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                     );
                 } catch {
                     // 单个好友失败不影响整体
+                } finally {
+                    processed.steal += 1;
                 }
                 if (signal?.aborted) break;
                 await randomDelay(500, 800);
@@ -495,6 +524,8 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                     }
                 } catch (e: any) {
                     log('好友', `批量帮助第 ${i + 1} 个好友失败: ${friend.name}, 错误: ${e.message}`, { module: 'friend', event: '批量帮助失败', index: i + 1, friendName: friend.name, error: e.message });
+                } finally {
+                    processed.help += 1;
                 }
                 if (signal?.aborted) break;
                 await randomDelay(500, 800);
@@ -544,6 +575,7 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
 
             // 按等级降序排序，优先处理等级高的好友
             badFriends.sort((a: any, b: any) => b.level - a.level);
+            candidates.bad = badFriends.length;
 
             // 只取等级最高的前20个
             const topBadFriends: any[] = badFriends.slice(0, 20);
@@ -570,6 +602,8 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
                         );
                     } catch {
                         // 单个好友失败不影响整体
+                    } finally {
+                        processed.bad += 1;
                     }
                     if (signal?.aborted) break;
                     if (isBadOperationLimitReached()) break;
@@ -596,10 +630,27 @@ export async function checkFriends(options: CheckFriendsOptions = {}): Promise<b
         return summary.length > 0;
 
     } catch (err: any) {
+        roundOutcome = 'error';
         logWarn('好友', `巡查异常: ${err.message}`);
         return false;
     } finally {
         isCheckingFriends = false;
+        const candidateCount = candidates.steal + candidates.help + candidates.bad;
+        const processedCount = processed.steal + processed.help + processed.bad;
+        const finishedAt = Date.now();
+        try {
+            options.onRoundMetric?.({
+                startedAt: roundStartedAt,
+                finishedAt,
+                outcome: signal?.aborted ? 'cancelled' : roundOutcome,
+                friendCount,
+                candidateCount,
+                processedCount,
+                deferredCount: Math.max(0, candidateCount - processedCount),
+                candidates: { ...candidates },
+                processed: { ...processed },
+            });
+        } catch {}
     }
 }
 

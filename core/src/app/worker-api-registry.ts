@@ -1,6 +1,6 @@
 export {};
 
-type WorkerApiExecution = 'queued' | 'direct' | 'self-queued';
+type WorkerApiExecution = 'queued' | 'direct' | 'self-queued' | 'read-fresh';
 type WorkerApiHandler = (args: any[]) => Promise<any> | any;
 
 interface WorkerApiDefinition {
@@ -70,8 +70,8 @@ function createWorkerApiRegistry(context: WorkerApiContext): Map<string, WorkerA
     register('doFriendOp', ([gid, opType]) => friend.doFriendOperation(gid, opType));
     register('delFriend', ([gid]) => friend.deleteFriend(gid));
 
-    register('getSeeds', () => farm.getAvailableSeeds());
-    register('getBag', () => warehouse.getBagDetail());
+    register('getSeeds', () => farm.getAvailableSeeds(), { execution: 'read-fresh' });
+    register('getBag', () => warehouse.getBagDetail(), { execution: 'read-fresh' });
     register('getBagSeeds', () => warehouse.getBagSeeds());
     register('getDiamondBalance', () => pay.getDiamondBalance());
     register('useItem', ([itemIdInput, countInput, uidInput]) => {

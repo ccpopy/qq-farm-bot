@@ -4,6 +4,12 @@ export interface AccountTaskMetric {
     name: string;
     priority: AccountTaskPriority;
     outcome: 'success' | 'error' | 'cancelled';
+    taskId?: string;
+    requestId?: string;
+    parentTaskId?: string;
+    parentTaskName?: string;
+    blockedByTaskId?: string;
+    blockedByTaskName?: string;
     queuedAt: number;
     startedAt: number;
     finishedAt: number;
@@ -19,6 +25,12 @@ export interface AccountTaskMetric {
 export interface AccountTaskMetricSource {
     name: string;
     priority: AccountTaskPriority;
+    taskId?: string;
+    requestId?: string;
+    parentTaskId?: string;
+    parentTaskName?: string;
+    blockedByTaskId?: string;
+    blockedByTaskName?: string;
     queuedAt: number;
     queueDepthAtSubmit: number;
     queueDepthAtStart: number;
@@ -49,6 +61,12 @@ export function createAccountTaskMetric(
         name: task.name,
         priority: task.priority,
         outcome,
+        ...(task.taskId ? { taskId: task.taskId } : {}),
+        ...(task.requestId ? { requestId: task.requestId } : {}),
+        ...(task.parentTaskId ? { parentTaskId: task.parentTaskId } : {}),
+        ...(task.parentTaskName ? { parentTaskName: task.parentTaskName } : {}),
+        ...(task.blockedByTaskId ? { blockedByTaskId: task.blockedByTaskId } : {}),
+        ...(task.blockedByTaskName ? { blockedByTaskName: task.blockedByTaskName } : {}),
         queuedAt: task.queuedAt,
         startedAt: normalizedStart,
         finishedAt: normalizedFinish,

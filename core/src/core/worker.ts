@@ -319,7 +319,10 @@ function runFriendTick(auto: any): boolean {
     const dueAt = nextFriendRunAt;
     const startedAt = Date.now();
     const started = friendTickJob.start(
-        (signal: AbortSignal) => checkFriends({ signal }),
+        (signal: AbortSignal) => checkFriends({
+            signal,
+            onRoundMetric: (metric: any) => accountTaskPerformance.recordFriendRound(metric),
+        }),
         {
             onError: (e: any) => {
                 log('系统', `好友统一任务执行失败: ${e.message}`, { module: 'system', event: '好友统一任务', result: 'error' });
@@ -828,10 +831,11 @@ function onKickout(payload: any): void {
 }
 
 async function handleRegisteredApiCall(msg: any): Promise<void> {
-    const { id, method, args } = msg;
+    const { id, method, args, requestId } = msg;
     const response = await executeWorkerApiCall(method, args, workerApiRegistry, {
         isAccountReady: () => isRunning && !shutdownStarted && loginReady,
         onStarted: () => sendToMaster({ type: 'api_call_started', id }),
+        requestId: String(requestId || ''),
         submitTask: submitAccountTask,
     });
     sendToMaster({ type: 'api_response', id, ...response });

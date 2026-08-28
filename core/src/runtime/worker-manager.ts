@@ -1,5 +1,6 @@
 export {};
 const { applyKnownFriendGidChange } = require('../app/known-friend-gid-sync');
+const { getHttpRequestId } = require('../app/http-request-context');
 const { sharedInviteBatch } = require('../app/shared-invite-batch');
 const { createScheduler } = require('../services/scheduler');
 
@@ -509,6 +510,7 @@ function createWorkerManager(options: WorkerManagerOptions) {
 
         return new Promise((resolve, reject) => {
             const id = worker.reqId++;
+            const requestId = getHttpRequestId();
             worker.requests.set(id, {
                 resolve,
                 reject,
@@ -516,7 +518,13 @@ function createWorkerManager(options: WorkerManagerOptions) {
                 timeoutMs: API_CALL_TIMEOUTS_MS[method] || defaultApiCallTimeoutMs,
             });
 
-            worker.process.send({ type: 'api_call', id, method, args });
+            worker.process.send({
+                type: 'api_call',
+                id,
+                method,
+                args,
+                ...(requestId ? { requestId } : {}),
+            });
         });
     }
 

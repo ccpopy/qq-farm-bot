@@ -272,6 +272,58 @@ test('task metrics report queue, execution, and dedupe timings', async () => {
     assert.equal(metric.queueDepthAtSubmit, 1);
 });
 
+test('queued task metrics identify the active blocker and originating request', async () => {
+    const metrics = [];
+    const runner = new AccountTaskRunner({ onMetric: metric => metrics.push(metric) });
+    const gate = deferred();
+
+    const active = runner.submit('farm.check', () => gate.promise);
+    await new Promise(setImmediate);
+    const queued = runner.submit('api:getBag', () => 'bag', {
+        priority: 'interactive',
+        requestId: 'request-42',
+    });
+
+    const snapshot = runner.getSnapshot();
+    assert.equal(typeof snapshot.running.taskId, 'string');
+    assert.equal(snapshot.queued[0].requestId, 'request-42');
+    assert.equal(snapshot.queued[0].blockedByTaskId, snapshot.running.taskId);
+    assert.equal(snapshot.queued[0].blockedByTaskName, 'farm.check');
+
+    gate.resolve();
+    await active;
+    assert.equal(await queued, 'bag');
+
+    const activeMetric = metrics.find(item => item.name === 'farm.check');
+    const queuedMetric = metrics.find(item => item.name === 'api:getBag');
+    assert.equal(queuedMetric.requestId, 'request-42');
+    assert.equal(queuedMetric.blockedByTaskId, activeMetric.taskId);
+    assert.equal(queuedMetric.blockedByTaskName, 'farm.check');
+});
+
+test('inline task metrics retain their parent task relationship', async () => {
+    const metrics = [];
+    const runner = new AccountTaskRunner({ onMetric: metric => metrics.push(metric) });
+
+    await runner.submit('farm.check', () => runner.submit('farm.phase.get-lands', () => true));
+
+    const parent = metrics.find(item => item.name === 'farm.check');
+    const phase = metrics.find(item => item.name === 'farm.phase.get-lands');
+    assert.equal(phase.inline, true);
+    assert.equal(phase.parentTaskId, parent.taskId);
+    assert.equal(phase.parentTaskName, 'farm.check');
+});
+
+test('task steps run directly without creating a queue when no parent task exists', async () => {
+    const metrics = [];
+    const runner = new AccountTaskRunner({ onMetric: metric => metrics.push(metric) });
+
+    assert.equal(await runner.runStep('friend.phase.enter', () => 'entered'), 'entered');
+    assert.deepEqual(metrics, []);
+    assert.equal(runner.getSnapshot().running, null);
+    assert.deepEqual(runner.getSnapshot().queued, []);
+});
+
 test('cleared tasks emit cancelled metrics', async () => {
     let now = 10;
     const metrics = [];

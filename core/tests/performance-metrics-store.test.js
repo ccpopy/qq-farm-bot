@@ -32,3 +32,36 @@ test('performance metric windows are appended to dedicated ndjson files', (t) =>
     assert.equal(record.schemaVersion, 1);
     assert.equal(typeof record.botVersion, 'string');
 });
+
+test('friend round windows are persisted without task histogram samples', (t) => {
+    const storeModule = require('../dist/services/performance-metrics-store');
+    const serviceModulePath = require.resolve('../dist/services/performance-metrics');
+    const OriginalStore = storeModule.PerformanceMetricsStore;
+    const records = [];
+
+    storeModule.PerformanceMetricsStore = class {
+        append(record) {
+            records.push(record);
+        }
+    };
+    delete require.cache[serviceModulePath];
+    t.after(() => {
+        storeModule.PerformanceMetricsStore = OriginalStore;
+        delete require.cache[serviceModulePath];
+    });
+
+    const { recordAccountTaskMetrics } = require(serviceModulePath);
+    recordAccountTaskMetrics('account-a', {
+        windowStartedAt: 1000,
+        windowEndedAt: 2000,
+        taskCount: 0,
+        friendRoundCount: 1,
+        friendRounds: [{ friendCount: 300, processedCount: 2, deferredCount: 298 }],
+        tasks: [],
+    });
+
+    assert.equal(records.length, 1);
+    assert.equal(records[0].kind, 'account_tasks');
+    assert.equal(records[0].accountId, 'account-a');
+    assert.equal(records[0].friendRoundCount, 1);
+});

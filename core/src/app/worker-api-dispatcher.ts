@@ -1,7 +1,7 @@
 export {};
 
 interface WorkerApiDefinition {
-    execution: 'queued' | 'direct' | 'self-queued';
+    execution: 'queued' | 'direct' | 'self-queued' | 'read-fresh';
     allowOffline: boolean;
     handle: (args: any[]) => Promise<any> | any;
 }
@@ -9,10 +9,11 @@ interface WorkerApiDefinition {
 interface WorkerApiDispatchOptions {
     isAccountReady: () => boolean;
     onStarted?: () => void;
+    requestId?: string;
     submitTask: (
         name: string,
         run: () => Promise<any> | any,
-        options: { priority: 'interactive' },
+        options: { priority: 'interactive'; requestId?: string },
     ) => Promise<any>;
 }
 
@@ -40,8 +41,10 @@ async function executeWorkerApiCall(
             options.onStarted?.();
             return definition.handle(callArgs);
         };
+        const taskOptions: { priority: 'interactive'; requestId?: string } = { priority: 'interactive' };
+        if (options.requestId) taskOptions.requestId = options.requestId;
         const result = definition.execution === 'queued'
-            ? await options.submitTask(`api:${method}`, run, { priority: 'interactive' })
+            ? await options.submitTask(`api:${method}`, run, taskOptions)
             : await run();
         return { result, error: null };
     } catch (error: any) {

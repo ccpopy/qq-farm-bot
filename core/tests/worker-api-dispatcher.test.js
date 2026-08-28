@@ -28,6 +28,7 @@ test('connected queued methods use the interactive account queue', async () => {
 
     const response = await executeWorkerApiCall('getLands', [21], registry, {
         isAccountReady: () => true,
+        requestId: 'request-21',
         submitTask: async (name, run, options) => {
             submissions.push({ name, options });
             return run();
@@ -37,7 +38,7 @@ test('connected queued methods use the interactive account queue', async () => {
     assert.deepEqual(response, { result: 42, error: null });
     assert.deepEqual(submissions, [{
         name: 'api:getLands',
-        options: { priority: 'interactive' },
+        options: { priority: 'interactive', requestId: 'request-21' },
     }]);
 });
 
@@ -110,6 +111,23 @@ test('self-queued methods do not acquire a second account queue slot', async () 
     });
 
     assert.deepEqual(response, { result: ['first', 'second'], error: null });
+    assert.equal(submitted, false);
+});
+
+test('fresh read methods bypass the mutation queue while retaining connection checks', async () => {
+    let submitted = false;
+    const registry = new Map([
+        ['getBag', definition(async () => ({ items: [] }), { execution: 'read-fresh' })],
+    ]);
+
+    const response = await executeWorkerApiCall('getBag', [], registry, {
+        isAccountReady: () => true,
+        submitTask: async () => {
+            submitted = true;
+        },
+    });
+
+    assert.deepEqual(response, { result: { items: [] }, error: null });
     assert.equal(submitted, false);
 });
 

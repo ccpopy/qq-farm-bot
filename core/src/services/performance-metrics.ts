@@ -9,7 +9,7 @@ const httpAggregators = new Map<string, any>();
 let flushTimer: NodeJS.Timeout | null = null;
 
 function recordAccountTaskMetrics(accountId: unknown, snapshot: any): void {
-    if (!snapshot || Number(snapshot.taskCount) <= 0) return;
+    if (!snapshot || (Number(snapshot.taskCount) <= 0 && Number(snapshot.friendRoundCount) <= 0)) return;
     performanceStore.append({
         kind: 'account_tasks',
         accountId: String(accountId || ''),
@@ -30,6 +30,10 @@ function recordHttpRequest(input: any): void {
         name: `http:${String(input.method || 'GET').toUpperCase()} ${String(input.route || '/api/unknown')}`,
         priority: 'interactive',
         outcome: Number(input.statusCode) >= 400 ? 'error' : 'success',
+        requestId: String(input.requestId || ''),
+        queuedAt: Math.max(0, Number(input.startedAt) || 0),
+        startedAt: Math.max(0, Number(input.startedAt) || 0),
+        finishedAt: Math.max(0, Number(input.finishedAt) || 0),
         waitMs: 0,
         runMs: durationMs,
         totalMs: durationMs,

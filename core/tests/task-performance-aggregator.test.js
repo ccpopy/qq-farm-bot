@@ -80,3 +80,78 @@ test('cancelled scheduled task metrics retain time already spent running', () =>
     assert.equal(metric.runMs, 2000);
     assert.equal(metric.totalMs, 2450);
 });
+
+test('slow task samples keep bounded causal identifiers without exposing numeric task suffixes', () => {
+    const aggregator = new TaskPerformanceAggregator({ now: () => 5000 });
+    aggregator.record({
+        name: 'friend.bad:123456',
+        priority: 'scheduled',
+        outcome: 'success',
+        taskId: 'task-child',
+        requestId: 'request-1',
+        blockedByTaskId: 'task-parent',
+        blockedByTaskName: 'farm.check',
+        queuedAt: 1000,
+        startedAt: 2500,
+        finishedAt: 3000,
+        waitMs: 1500,
+        runMs: 500,
+        totalMs: 2000,
+        queueDepthAtSubmit: 2,
+        queueDepthAtStart: 1,
+        dedupeHits: 0,
+        inline: false,
+    });
+
+    const snapshot = aggregator.snapshot();
+    assert.equal(snapshot.slowTasks.length, 1);
+    assert.deepEqual(snapshot.slowTasks[0], {
+        name: 'friend.bad:*',
+        priority: 'scheduled',
+        outcome: 'success',
+        inline: false,
+        taskId: 'task-child',
+        requestId: 'request-1',
+        blockedByTaskId: 'task-parent',
+        blockedByTaskName: 'farm.check',
+        queuedAt: 1000,
+        startedAt: 2500,
+        finishedAt: 3000,
+        waitMs: 1500,
+        runMs: 500,
+        totalMs: 2000,
+        queueDepthAtSubmit: 2,
+        queueDepthAtStart: 1,
+    });
+});
+
+test('friend round summaries are exported even without task histogram samples', () => {
+    const aggregator = new TaskPerformanceAggregator({ now: () => 9000 });
+    aggregator.recordFriendRound({
+        startedAt: 1000,
+        finishedAt: 8000,
+        outcome: 'cancelled',
+        friendCount: 300,
+        candidateCount: 300,
+        processedCount: 2,
+        deferredCount: 298,
+        candidates: { steal: 300, help: 0, bad: 0 },
+        processed: { steal: 2, help: 0, bad: 0 },
+    });
+
+    const snapshot = aggregator.drain();
+    assert.equal(snapshot.taskCount, 0);
+    assert.equal(snapshot.friendRoundCount, 1);
+    assert.deepEqual(snapshot.friendRounds[0], {
+        startedAt: 1000,
+        finishedAt: 8000,
+        durationMs: 7000,
+        outcome: 'cancelled',
+        friendCount: 300,
+        candidateCount: 300,
+        processedCount: 2,
+        deferredCount: 298,
+        candidates: { steal: 300, help: 0, bad: 0 },
+        processed: { steal: 2, help: 0, bad: 0 },
+    });
+});

@@ -115,6 +115,15 @@ test('only explicit local operations bypass account serialization', () => {
         'getWeatherFriends',
         'scanWeatherFriends',
     ]);
+    const freshReads = [...registry]
+        .filter(([, entry]) => entry.execution === 'read-fresh')
+        .map(([method]) => method)
+        .sort();
+
+    assert.deepEqual(freshReads, [
+        'getBag',
+        'getSeeds',
+    ]);
     assert.equal(registry.get('getFriendLands').execution, 'queued');
     assert.equal(registry.get('getCurrentWeatherActivity').execution, 'queued');
 });

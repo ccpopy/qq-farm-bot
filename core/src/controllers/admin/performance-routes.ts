@@ -1,8 +1,10 @@
 import type { Application, Request, Response } from 'express';
 export {};
 
+const { randomUUID } = require('node:crypto');
 const fs = require('node:fs');
 const { once } = require('node:events');
+const { runWithHttpRequestContext } = require('../../app/http-request-context');
 const {
     getPerformanceStatus,
     preparePerformanceExport,
@@ -18,18 +20,25 @@ function normalizeFallbackRoute(input: unknown): string {
 
 function createPerformanceMiddleware() {
     return (req: Request, res: Response, next: () => void): void => {
+        const requestId = randomUUID();
+        const wallStartedAt = Date.now();
         const startedAt = process.hrtime.bigint();
+        res.setHeader('X-Request-Id', requestId);
         res.once('finish', () => {
+            const finishedAt = Date.now();
             const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
             recordHttpRequest({
+                requestId,
                 accountId: req.headers['x-account-id'],
                 method: req.method,
                 route: (req.route && req.route.path) || normalizeFallbackRoute(req.originalUrl),
                 statusCode: res.statusCode,
                 durationMs,
+                startedAt: wallStartedAt,
+                finishedAt,
             });
         });
-        next();
+        runWithHttpRequestContext(requestId, next);
     };
 }
 
