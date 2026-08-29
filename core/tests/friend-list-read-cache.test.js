@@ -52,10 +52,13 @@ test('friend list reads share in-flight work and a short successful-result cache
     await new Promise(setImmediate);
     assert.equal(calls, 1);
     releaseFirst();
-    assert.strictEqual(await first, await concurrent);
+    const firstResult = await first;
+    const concurrentResult = await concurrent;
+    assert.strictEqual(firstResult, concurrentResult);
 
-    await friendApi.getAllFriends();
+    const cached = await friendApi.getAllFriends();
     assert.equal(calls, 1);
+    assert.strictEqual(cached, firstResult);
 
     now += friendApi.ALL_FRIENDS_CACHE_TTL_MS;
     await friendApi.getAllFriends();

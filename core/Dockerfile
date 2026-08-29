@@ -55,13 +55,10 @@ RUN --mount=type=cache,id=qq-farm-pnpm-store,target=/pnpm/store,sharing=locked \
 
 FROM ${NODE_IMAGE} AS runner
 
-ARG BUILD_SHA=unknown
-
 WORKDIR /app/core
 
 ENV NODE_ENV=production
 ENV TZ=Asia/Shanghai
-ENV FARM_BUILD_SHA=${BUILD_SHA}
 
 RUN apk add --no-cache tzdata && \
     cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \

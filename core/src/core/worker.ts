@@ -8,12 +8,9 @@ const {
     closeAccountTaskQueue,
     getAccountTaskRunnerSnapshot,
     openAccountTaskQueue,
-    setAccountTaskMetricObserver,
     submitAccountTask,
 } = require('../app/account-task-runner');
-const { createScheduledTaskMetric, mergeTaskOutcomes } = require('../app/account-task-metrics');
 const { BackgroundJob } = require('../app/background-job');
-const { TaskPerformanceAggregator } = require('../app/task-performance-aggregator');
 const { executeWorkerApiCall } = require('../app/worker-api-dispatcher');
 const { runClaimedInviteBatch } = require('../app/worker-invite-batch');
 const { createWorkerApiRegistry } = require('../app/worker-api-registry');
@@ -134,22 +131,6 @@ let runtimeGeneration: number = 0;
 let lastDailyRunDate: string = '';
 const workerScheduler = createScheduler('worker');
 const friendTickJob = new BackgroundJob();
-const accountTaskPerformance = new TaskPerformanceAggregator();
-const taskMetricsWindowMs = Math.min(
-    60 * 60 * 1000,
-    Math.max(60 * 1000, Number(process.env.FARM_PERF_WINDOW_MS) || 5 * 60 * 1000),
-);
-
-setAccountTaskMetricObserver((metric: any) => accountTaskPerformance.record(metric));
-
-function flushTaskPerformanceMetrics(): void {
-    const snapshot = accountTaskPerformance.drain();
-    if (snapshot) sendToMaster({ type: 'task_metrics', data: snapshot });
-}
-
-workerScheduler.setIntervalTask('task_metrics_flush', taskMetricsWindowMs, flushTaskPerformanceMetrics, {
-    preventOverlap: true,
-});
 
 const workerApiRegistry = createWorkerApiRegistry({
     applyRuntimeConfigSnapshot(snapshot: any) {
@@ -169,7 +150,6 @@ const workerApiRegistry = createWorkerApiRegistry({
                 nextRunAt: Number(nextFriendRunAt) || 0,
             },
         },
-        performance: accountTaskPerformance.snapshot(),
     }),
 });
 
@@ -262,9 +242,6 @@ function resetUnifiedSchedule(): void {
 }
 
 async function runFarmTick(auto: any): Promise<void> {
-    const dueAt = nextFarmRunAt;
-    const startedAt = Date.now();
-    let outcome: 'success' | 'error' = 'success';
     const farmMs = randomIntervalMs(
         CONFIG.farmCheckIntervalMin || CONFIG.farmCheckInterval || 2000,
         CONFIG.farmCheckIntervalMax || CONFIG.farmCheckInterval || 2000
@@ -290,16 +267,8 @@ async function runFarmTick(auto: any): Promise<void> {
             });
         }
     } catch {
-        outcome = 'error';
+        // ignore
     } finally {
-        accountTaskPerformance.record(createScheduledTaskMetric({
-            name: 'scheduler.farm-tick',
-            priority: 'scheduled',
-            outcome,
-            dueAt,
-            startedAt,
-            finishedAt: Date.now(),
-        }));
         nextFarmRunAt = Date.now() + farmMs;
     }
 }
@@ -316,30 +285,13 @@ function runFriendTick(auto: any): boolean {
         return false;
     }
 
-    const dueAt = nextFriendRunAt;
-    const startedAt = Date.now();
-    let roundOutcome: 'success' | 'error' | 'cancelled' = 'success';
     const started = friendTickJob.start(
-        (signal: AbortSignal) => checkFriends({
-            signal,
-            onRoundMetric: (metric: any) => {
-                roundOutcome = metric.outcome;
-                accountTaskPerformance.recordFriendRound(metric);
-            },
-        }),
+        (signal: AbortSignal) => checkFriends({ signal }),
         {
             onError: (e: any) => {
                 log('系统', `好友统一任务执行失败: ${e.message}`, { module: 'system', event: '好友统一任务', result: 'error' });
             },
-            onSettled: (outcome: 'success' | 'error' | 'cancelled') => {
-                accountTaskPerformance.record(createScheduledTaskMetric({
-                    name: 'scheduler.friend-round',
-                    priority: 'scheduled',
-                    outcome: mergeTaskOutcomes(outcome, roundOutcome),
-                    dueAt,
-                    startedAt,
-                    finishedAt: Date.now(),
-                }));
+            onSettled: () => {
                 nextFriendRunAt = Date.now() + friendMs;
             },
         },
@@ -788,7 +740,6 @@ function quiesceBot(reason: string): void {
     stopDailyRoutineTimer();
     cleanupTaskSystem();
     closeAccountTaskQueue(reason);
-    flushTaskPerformanceMetrics();
     workerScheduler.clearAll();
     detachRuntimeListeners();
     cleanup(reason);
@@ -835,11 +786,10 @@ function onKickout(payload: any): void {
 }
 
 async function handleRegisteredApiCall(msg: any): Promise<void> {
-    const { id, method, args, requestId } = msg;
+    const { id, method, args } = msg;
     const response = await executeWorkerApiCall(method, args, workerApiRegistry, {
         isAccountReady: () => isRunning && !shutdownStarted && loginReady,
         onStarted: () => sendToMaster({ type: 'api_call_started', id }),
-        requestId: String(requestId || ''),
         submitTask: submitAccountTask,
     });
     sendToMaster({ type: 'api_response', id, ...response });

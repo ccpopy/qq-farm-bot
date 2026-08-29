@@ -167,11 +167,6 @@ if [[ ! -f "$CORE_OUTPUT" ]]; then
     die "Build completed but core/client.js was not generated."
 fi
 
-if command -v git >/dev/null 2>&1; then
-    FARM_BUILD_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
-    export FARM_BUILD_SHA
-fi
-
 : > "$LOG_FILE"
 if command -v setsid >/dev/null 2>&1; then
     nohup setsid node "$SCRIPT_DIR/core/client.js" >> "$LOG_FILE" 2>&1 &

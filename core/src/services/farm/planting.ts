@@ -814,7 +814,10 @@ async function plantFromShop(landsToPlant: number[], state: any, overrideStrateg
     return { plantedLands: [...new Set(plantedLands)], remainingLandIds, uncertain };
 }
 
-async function runFertilizerByConfig(plantedLands: any[] = [], options: { skipNormal?: boolean; reason?: string } = {}): Promise<{ normal: number; organic: number }> {
+async function runFertilizerByConfig(
+    plantedLands: any[] = [],
+    options: { skipNormal?: boolean; reason?: string; landsSnapshot?: any } = {},
+): Promise<{ normal: number; organic: number }> {
     const { fertilize, fertilizeOrganicLoop } = require('./api');
     const automation = getAutomation() || {};
     const fertilizerConfig = automation.fertilizer || 'none';
@@ -855,15 +858,19 @@ async function runFertilizerByConfig(plantedLands: any[] = [], options: { skipNo
         }
         hasFreshLandSnapshot = true;
     };
-    try {
-        applyLandSnapshot(await getAllLands());
-    } catch (e: any) {
-        logWarn('施肥', `${reasonLabel}：获取土地信息失败，按已知地块继续 ${e.message}`, {
-            module: 'farm',
-            event: eventName,
-            result: 'error',
-            reason,
-        });
+    if (Array.isArray(options.landsSnapshot?.lands) && options.landsSnapshot.lands.length > 0) {
+        applyLandSnapshot(options.landsSnapshot);
+    } else {
+        try {
+            applyLandSnapshot(await getAllLands());
+        } catch (e: any) {
+            logWarn('施肥', `${reasonLabel}：获取土地信息失败，按已知地块继续 ${e.message}`, {
+                module: 'farm',
+                event: eventName,
+                result: 'error',
+                reason,
+            });
+        }
     }
 
     if (!hasFreshLandSnapshot && fertilizerConfig === 'smart') {

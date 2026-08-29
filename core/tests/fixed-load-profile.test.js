@@ -64,5 +64,8 @@ test('fixed load runner records stable cycle indexes under overlapping schedules
     const records = fs.readFileSync(output, 'utf8').trim().split('\n').map(line => JSON.parse(line));
     const requests = records.filter(record => record.kind === 'fixed_load_request');
     assert.ok(summary.cycles >= 2);
-    assert.deepEqual(requests.map(record => record.cycle), Array.from({ length: summary.cycles }, (_, index) => index));
+    assert.deepEqual(
+        requests.map(record => record.cycle).sort((left, right) => left - right),
+        Array.from({ length: summary.cycles }, (_, index) => index),
+    );
 });

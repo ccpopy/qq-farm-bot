@@ -76,6 +76,18 @@ test('smart fertilizer reuses its fresh land read when no land mutation occurs',
     assert.deepEqual(calls.organicTargets, [[11]]);
 });
 
+test('smart fertilizer accepts a fresh scheduler snapshot without another land read', async (t) => {
+    const { planting, calls } = loadPlantingWithFertilizerStubs(t);
+
+    await planting.runFertilizerByConfig([], {
+        skipNormal: true,
+        landsSnapshot: { lands: [{ id: 12, level: 1 }] },
+    });
+
+    assert.equal(calls.reads, 0);
+    assert.deepEqual(calls.organicTargets, [[12]]);
+});
+
 test('smart fertilizer refreshes lands after normal fertilizer changes state', async (t) => {
     const { planting, calls } = loadPlantingWithFertilizerStubs(t, {
         reads: [

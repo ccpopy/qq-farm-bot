@@ -1,45 +1,25 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { randomUUID } from 'node:crypto';
-import type {
-    AccountTaskMetric,
-    AccountTaskMetricObserver,
-    AccountTaskMetricSource,
-    AccountTaskPriority,
-} from './account-task-metrics';
 
 export {};
 
-const { createAccountTaskMetric } = require('./account-task-metrics');
+type AccountTaskPriority = 'interactive' | 'event' | 'scheduled' | 'maintenance';
 
 interface AccountTaskOptions {
     priority?: AccountTaskPriority;
     dedupeKey?: string;
-    requestId?: string;
 }
 
 interface AccountTaskRunnerOptions {
     now?: () => number;
     agingIntervalMs?: number;
-    onMetric?: AccountTaskMetricObserver;
 }
 
 interface QueuedTask<T> {
-    taskId: string;
     name: string;
     priority: AccountTaskPriority;
-    requestId: string;
-    parentTaskId: string;
-    parentTaskName: string;
-    blockedByTaskId: string;
-    blockedByTaskName: string;
     dedupeKey: string;
     queuedAt: number;
-    startedAt: number;
     sequence: number;
-    queueDepthAtSubmit: number;
-    queueDepthAtStart: number;
-    dedupeHits: number;
-    childErrorCount: number;
     run: () => Promise<T> | T;
     promise: Promise<T>;
     resolve: (value: T | PromiseLike<T>) => void;
@@ -61,7 +41,6 @@ class AccountTaskRunner {
     private readonly executionContext = new AsyncLocalStorage<QueuedTask<any>>();
     private readonly now: () => number;
     private readonly agingIntervalMs: number;
-    private onMetric: AccountTaskMetricObserver | null;
     private activeTask: QueuedTask<any> | null = null;
     private sequence = 0;
     private drainScheduled = false;
@@ -70,17 +49,11 @@ class AccountTaskRunner {
     constructor(options: AccountTaskRunnerOptions = {}) {
         this.now = options.now || Date.now;
         this.agingIntervalMs = Math.max(1, Number(options.agingIntervalMs) || DEFAULT_AGING_INTERVAL_MS);
-        this.onMetric = typeof options.onMetric === 'function' ? options.onMetric : null;
-    }
-
-    setMetricObserver(observer: AccountTaskMetricObserver | null): void {
-        this.onMetric = typeof observer === 'function' ? observer : null;
     }
 
     close(reason = '账号任务已停止'): number {
-        const closedReason = String(reason || '账号任务已停止');
-        this.closedReason = closedReason;
-        return this.clearPending(closedReason);
+        this.closedReason = String(reason || '账号任务已停止');
+        return this.clearPending(this.closedReason);
     }
 
     open(): void {
@@ -91,16 +64,10 @@ class AccountTaskRunner {
         const taskName = String(name || '').trim();
         if (!taskName) throw new Error('账号任务名称不能为空');
         if (typeof run !== 'function') throw new Error(`账号任务 ${taskName} 缺少执行函数`);
-
         if (this.closedReason) return Promise.reject(new Error(this.closedReason));
 
         if (this.executionContext.getStore() === this.activeTask) {
-            return this.runInline(
-                taskName,
-                run,
-                options.priority || this.activeTask?.priority || 'scheduled',
-                String(options.requestId || this.activeTask?.requestId || ''),
-            );
+            return Promise.resolve().then(run);
         }
 
         const dedupeKey = String(options.dedupeKey || '').trim();
@@ -111,7 +78,6 @@ class AccountTaskRunner {
                 if (PRIORITY_RANK[priority] < PRIORITY_RANK[queued.priority]) {
                     queued.priority = priority;
                 }
-                queued.dedupeHits += 1;
                 return queued.promise as Promise<T>;
             }
         }
@@ -122,24 +88,12 @@ class AccountTaskRunner {
             resolve = done;
             reject = fail;
         });
-        const blockedByTask = this.activeTask;
         const task: QueuedTask<T> = {
-            taskId: randomUUID(),
             name: taskName,
             priority: options.priority || 'scheduled',
-            requestId: String(options.requestId || ''),
-            parentTaskId: '',
-            parentTaskName: '',
-            blockedByTaskId: blockedByTask?.taskId || '',
-            blockedByTaskName: blockedByTask?.name || '',
             dedupeKey,
             queuedAt: this.now(),
-            startedAt: 0,
             sequence: this.sequence++,
-            queueDepthAtSubmit: this.queue.length + 1,
-            queueDepthAtStart: 0,
-            dedupeHits: 0,
-            childErrorCount: 0,
             run,
             promise,
             resolve,
@@ -156,20 +110,13 @@ class AccountTaskRunner {
         const taskName = String(name || '').trim();
         if (!taskName) throw new Error('账号任务步骤名称不能为空');
         if (typeof run !== 'function') throw new Error(`账号任务步骤 ${taskName} 缺少执行函数`);
-
-        const parentTask = this.executionContext.getStore();
-        if (!parentTask || parentTask !== this.activeTask) return Promise.resolve().then(run);
-        return this.runInline(taskName, run, parentTask.priority, parentTask.requestId);
+        return Promise.resolve().then(run);
     }
 
     clearPending(reason = '账号任务已停止'): number {
         const pending = this.queue.splice(0);
         this.queuedByDedupeKey.clear();
-        const finishedAt = this.now();
-        for (const task of pending) {
-            this.emitMetric(task, 'cancelled', finishedAt, finishedAt);
-            task.reject(new Error(reason));
-        }
+        for (const task of pending) task.reject(new Error(reason));
         return pending.length;
     }
 
@@ -178,21 +125,14 @@ class AccountTaskRunner {
             closed: this.closedReason !== '',
             running: this.activeTask
                 ? {
-                    taskId: this.activeTask.taskId,
                     name: this.activeTask.name,
                     priority: this.activeTask.priority,
-                    requestId: this.activeTask.requestId,
                     queuedAt: this.activeTask.queuedAt,
-                    startedAt: this.activeTask.startedAt,
                 }
                 : null,
             queued: this.queue.map(task => ({
-                taskId: task.taskId,
                 name: task.name,
                 priority: task.priority,
-                requestId: task.requestId,
-                blockedByTaskId: task.blockedByTaskId,
-                blockedByTaskName: task.blockedByTaskName,
                 queuedAt: task.queuedAt,
             })),
         };
@@ -235,72 +175,18 @@ class AccountTaskRunner {
         if (!task) return;
 
         this.activeTask = task;
-        task.startedAt = this.now();
-        task.queueDepthAtStart = this.queue.length;
         if (task.dedupeKey && this.queuedByDedupeKey.get(task.dedupeKey) === task) {
             this.queuedByDedupeKey.delete(task.dedupeKey);
         }
 
-        let outcome: AccountTaskMetric['outcome'] = 'success';
         try {
-            const result = await this.executionContext.run(task, task.run);
-            task.resolve(result);
+            task.resolve(await this.executionContext.run(task, task.run));
         } catch (error) {
-            outcome = 'error';
             task.reject(error);
         } finally {
-            const metricOutcome = outcome === 'success' && task.childErrorCount > 0 ? 'partial' : outcome;
-            this.emitMetric(task, metricOutcome, task.startedAt, this.now());
             this.activeTask = null;
             this.scheduleDrain();
         }
-    }
-
-    private runInline<T>(
-        name: string,
-        run: () => Promise<T> | T,
-        priority: AccountTaskPriority,
-        requestId: string,
-    ): Promise<T> {
-        const parentTask = this.activeTask;
-        const startedAt = this.now();
-        const source: AccountTaskMetricSource = {
-            taskId: randomUUID(),
-            name,
-            priority,
-            requestId,
-            parentTaskId: parentTask?.taskId || '',
-            parentTaskName: parentTask?.name || '',
-            queuedAt: startedAt,
-            queueDepthAtSubmit: this.queue.length,
-            queueDepthAtStart: this.queue.length,
-            dedupeHits: 0,
-        };
-        return Promise.resolve()
-            .then(run)
-            .then((result) => {
-                const finishedAt = this.now();
-                this.emitMetric(source, 'success', startedAt, finishedAt, true);
-                return result;
-            }, (error) => {
-                const finishedAt = this.now();
-                if (parentTask) parentTask.childErrorCount += 1;
-                this.emitMetric(source, 'error', startedAt, finishedAt, true);
-                throw error;
-            });
-    }
-
-    private emitMetric(
-        task: AccountTaskMetricSource,
-        outcome: AccountTaskMetric['outcome'],
-        startedAt: number,
-        finishedAt: number,
-        inline = false,
-    ): void {
-        if (!this.onMetric) return;
-        try {
-            this.onMetric(createAccountTaskMetric(task, outcome, startedAt, finishedAt, inline));
-        } catch {}
     }
 }
 
@@ -334,10 +220,6 @@ function getAccountTaskRunnerSnapshot(): any {
     return accountTaskRunner.getSnapshot();
 }
 
-function setAccountTaskMetricObserver(observer: AccountTaskMetricObserver | null): void {
-    accountTaskRunner.setMetricObserver(observer);
-}
-
 module.exports = {
     AccountTaskRunner,
     clearPendingAccountTasks,
@@ -345,6 +227,5 @@ module.exports = {
     getAccountTaskRunnerSnapshot,
     openAccountTaskQueue,
     runAccountTaskStep,
-    setAccountTaskMetricObserver,
     submitAccountTask,
 };
