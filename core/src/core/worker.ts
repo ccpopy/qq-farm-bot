@@ -42,8 +42,10 @@ const { setRecordGoldExpHook } = require('../services/status');
 const { cleanupTaskSystem, checkAndClaimTasks, getTaskClaimDailyState, getTaskDailyStateLikeApp, getGrowthTaskStateLikeApp } = require('../services/task');
 const { sellAllFruits, getBag, getBagItems, openFertilizerGiftPacksSilently } = require('../services/warehouse');
 const { checkAndClaimDogSkillGifts } = require('../services/dog-skill-gifts');
-const { connect, cleanup, getWs, getUserState, networkEvents } = require('../utils/network');
+const { isGatewayHealthyForBusiness, nextBusinessBackoffMs } = require('../utils/low-priority-gate');
+const { connect, cleanup, getWs, getUserState, networkEvents, getGatewayLoad } = require('../utils/network');
 const { loadProto } = require('../utils/proto');
+const { runWithRequestClass } = require('../utils/request-context');
 const { setLogHook, log, logWarn, toNum, getSystemDateKey, formatSystemDateTime24 } = require('../utils/utils');
 
 // Extend CONFIG with the unified friend-task interval used by this worker.
@@ -118,6 +120,7 @@ let appliedConfigRevision: number = 0;
 let unifiedSchedulerRunning: boolean = false;
 let nextFarmRunAt: number = 0;
 let nextFriendRunAt: number = 0;
+const businessBackoffMs: Record<'farm' | 'friend', number> = { farm: 0, friend: 0 };
 let lastStatusHash: string = '';
 let lastStatusSentAt: number = 0;
 let onSellGain: ((deltaGold: any) => void) | null = null;
@@ -239,33 +242,88 @@ function resetUnifiedSchedule(): void {
     const now = Date.now();
     nextFarmRunAt = now + farmMs;
     nextFriendRunAt = now + friendMs;
+    businessBackoffMs.farm = 0;
+    businessBackoffMs.friend = 0;
+}
+
+const BUSINESS_TICK_LABEL: Record<'farm' | 'friend', string> = {
+    farm: '农场定时任务',
+    friend: '好友定时任务',
+};
+
+function describeGatewayStall(load: any): string {
+    const parts: string[] = [];
+    const misses = Number(load?.heartbeatMisses) || 0;
+    const oldest = Number(load?.oldestPendingAgeMs) || 0;
+    if (misses > 0) parts.push(`心跳漏 ${misses} 次`);
+    if (oldest > 0) parts.push(`最老在途 ${(oldest / 1000).toFixed(1)}s`);
+    parts.push(`pending=${Number(load?.pending) || 0}`);
+    parts.push(`queued=${Number(load?.queued) || 0}`);
+    return parts.join(', ');
+}
+
+function nextBusinessTickDeferMs(kind: 'farm' | 'friend'): number {
+    const load = getGatewayLoad();
+    if (isGatewayHealthyForBusiness(load)) {
+        if (businessBackoffMs[kind] > 0) {
+            businessBackoffMs[kind] = 0;
+            log('系统', `网关已恢复，${BUSINESS_TICK_LABEL[kind]}回到正常间隔`, {
+                module: 'system',
+                event: '网关退避',
+                result: 'resume',
+                requestClass: kind,
+            });
+        }
+        return 0;
+    }
+
+    const firstDefer = businessBackoffMs[kind] === 0;
+    const backoffMs = nextBusinessBackoffMs(businessBackoffMs[kind]);
+    businessBackoffMs[kind] = backoffMs;
+    if (firstDefer) {
+        logWarn('系统', `网关无回包，${BUSINESS_TICK_LABEL[kind]}退避 ${Math.round(backoffMs / 1000)}s (${describeGatewayStall(load)})`, {
+            module: 'system',
+            event: '网关退避',
+            result: 'defer',
+            requestClass: kind,
+            backoffMs,
+        });
+    }
+    return backoffMs;
 }
 
 async function runFarmTick(auto: any): Promise<void> {
+    const deferMs = nextBusinessTickDeferMs('farm');
+    if (deferMs > 0) {
+        nextFarmRunAt = Date.now() + deferMs;
+        return;
+    }
     const farmMs = randomIntervalMs(
         CONFIG.farmCheckIntervalMin || CONFIG.farmCheckInterval || 2000,
         CONFIG.farmCheckIntervalMax || CONFIG.farmCheckInterval || 2000
     );
     try {
-        if (auto.farm) await checkFarm();
-        if (auto.task) {
-            await submitAccountTask('task.claim', checkAndClaimTasks, {
-                priority: 'scheduled',
-                dedupeKey: 'task.claim',
-            });
-        }
-        if (auto.email) {
-            await submitAccountTask('email.claim', checkAndClaimEmails, {
-                priority: 'scheduled',
-                dedupeKey: 'email.claim',
-            });
-        }
-        if (auto.fertilizer_gift) {
-            await submitAccountTask('fertilizer-gift.open', openFertilizerGiftPacksSilently, {
-                priority: 'scheduled',
-                dedupeKey: 'fertilizer-gift.open',
-            });
-        }
+        await runWithRequestClass('farm', async () => {
+            if (auto.farm) await checkFarm();
+            if (auto.task) {
+                await submitAccountTask('task.claim', checkAndClaimTasks, {
+                    priority: 'scheduled',
+                    dedupeKey: 'task.claim',
+                });
+            }
+            if (auto.email) {
+                await submitAccountTask('email.claim', checkAndClaimEmails, {
+                    priority: 'scheduled',
+                    dedupeKey: 'email.claim',
+                });
+            }
+            if (auto.fertilizer_gift) {
+                await submitAccountTask('fertilizer-gift.open', openFertilizerGiftPacksSilently, {
+                    priority: 'scheduled',
+                    dedupeKey: 'fertilizer-gift.open',
+                });
+            }
+        });
     } catch {
         // ignore
     } finally {
@@ -285,8 +343,14 @@ function runFriendTick(auto: any): boolean {
         return false;
     }
 
+    const deferMs = nextBusinessTickDeferMs('friend');
+    if (deferMs > 0) {
+        nextFriendRunAt = Date.now() + deferMs;
+        return false;
+    }
+
     const started = friendTickJob.start(
-        (signal: AbortSignal) => checkFriends({ signal }),
+        (signal: AbortSignal) => runWithRequestClass('friend', () => checkFriends({ signal })),
         {
             onError: (e: any) => {
                 log('系统', `好友统一任务执行失败: ${e.message}`, { module: 'system', event: '好友统一任务', result: 'error' });
@@ -616,6 +680,7 @@ async function startBot(config: any): Promise<void> {
                 await submitAccountTask('warehouse.sell-after-harvest', sellAllFruits, {
                     priority: 'event',
                     dedupeKey: 'warehouse.sell-after-harvest',
+                    requestClass: 'farm',
                 });
             } catch (e: any) {
                 log('仓库', `收获后自动出售失败: ${e.message}`, { module: 'warehouse', event: '收获后出售', result: 'error' });
@@ -632,7 +697,7 @@ async function startBot(config: any): Promise<void> {
             submitAccountTask(
                 'dog-skill-gift.claim',
                 () => checkAndClaimDogSkillGifts(pendingCount),
-                { priority: 'event', dedupeKey: 'dog-skill-gift.claim' },
+                { priority: 'event', dedupeKey: 'dog-skill-gift.claim', requestClass: 'farm' },
             ).catch(() => null);
         };
         networkEvents.on('dogSkillGiftPending', onDogSkillGiftPending);

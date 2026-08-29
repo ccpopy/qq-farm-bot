@@ -16,7 +16,8 @@ const {
     getCleanableFarmSocialEventItemIds,
     resolveRemovableHarvestedLands,
 } = require('./land-analysis');
-const { autoPlantEmptyLands, runFertilizerByConfig } = require('./planting');
+const { autoPlantEmptyLands } = require('./planting');
+const { runFertilizerByConfig } = require('./fertilizer');
 const { checkAndBuyFertilizerBoth } = require('../mall');
 // 延迟加载以打破循环依赖: visit-strategy → farm/index → scheduler → visit-strategy
 function inFarmQuietHours() {

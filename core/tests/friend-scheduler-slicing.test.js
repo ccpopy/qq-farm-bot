@@ -22,7 +22,7 @@ test('a 300-friend scan yields after each friend and stops after the active slic
         extractReplyFriends: gidManager.extractReplyFriends,
         inFriendQuietHours: visitStrategy.inFriendQuietHours,
         cacheFriendsListFromReply: visitStrategy.cacheFriendsListFromReply,
-        visitFriendForSteal: visitStrategy.visitFriendForSteal,
+        visitFriend: visitStrategy.visitFriend,
     };
     t.after(() => {
         Object.assign(runner, { submitAccountTask: originals.submitAccountTask });
@@ -41,7 +41,7 @@ test('a 300-friend scan yields after each friend and stops after the active slic
         Object.assign(visitStrategy, {
             inFriendQuietHours: originals.inFriendQuietHours,
             cacheFriendsListFromReply: originals.cacheFriendsListFromReply,
-            visitFriendForSteal: originals.visitFriendForSteal,
+            visitFriend: originals.visitFriend,
         });
         delete require.cache[schedulerModulePath];
     });
@@ -90,7 +90,7 @@ test('a 300-friend scan yields after each friend and stops after the active slic
     const secondVisitStarted = new Promise(resolve => {
         markSecondVisitStarted = resolve;
     });
-    visitStrategy.visitFriendForSteal = async (friend) => {
+    visitStrategy.visitFriend = async (friend) => {
         events.push(`visit:${friend.gid}:start`);
         if (friend.gid === 10001) {
             markFirstVisitStarted();
@@ -135,8 +135,8 @@ test('a 300-friend scan yields after each friend and stops after the active slic
     ]);
     assert.equal(submissions.length, 3);
     assert.equal(submissions[0].name, 'friend.phase.get-all-friends');
-    assert.equal(submissions[1].name, 'friend.steal:10001');
-    assert.equal(submissions.at(-1).name, 'friend.steal:10002');
+    assert.equal(submissions[1].name, 'friend.visit:10001');
+    assert.equal(submissions.at(-1).name, 'friend.visit:10002');
     assert.ok(submissions.every(item => item.options.priority === 'scheduled'));
 
     listFailure = new Error('friend list failed');

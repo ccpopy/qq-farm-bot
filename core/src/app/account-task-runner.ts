@@ -2,11 +2,14 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 export {};
 
+const { getAmbientRequestClass, runWithRequestClass } = require('../utils/request-context');
+
 type AccountTaskPriority = 'interactive' | 'event' | 'scheduled' | 'maintenance';
 
 interface AccountTaskOptions {
     priority?: AccountTaskPriority;
     dedupeKey?: string;
+    requestClass?: 'critical' | 'foreground' | 'farm' | 'friend' | 'background';
 }
 
 interface AccountTaskRunnerOptions {
@@ -18,6 +21,7 @@ interface QueuedTask<T> {
     name: string;
     priority: AccountTaskPriority;
     dedupeKey: string;
+    requestClass: string | null;
     queuedAt: number;
     sequence: number;
     run: () => Promise<T> | T;
@@ -70,13 +74,17 @@ class AccountTaskRunner {
             return Promise.resolve().then(run);
         }
 
+        const priority = options.priority || 'scheduled';
+        const requestClass = options.requestClass
+            || getAmbientRequestClass()
+            || (priority === 'interactive' ? 'foreground' : null);
         const dedupeKey = String(options.dedupeKey || '').trim();
         if (dedupeKey) {
             const queued = this.queuedByDedupeKey.get(dedupeKey);
             if (queued) {
-                const priority = options.priority || 'scheduled';
                 if (PRIORITY_RANK[priority] < PRIORITY_RANK[queued.priority]) {
                     queued.priority = priority;
+                    queued.requestClass = requestClass;
                 }
                 return queued.promise as Promise<T>;
             }
@@ -90,8 +98,9 @@ class AccountTaskRunner {
         });
         const task: QueuedTask<T> = {
             name: taskName,
-            priority: options.priority || 'scheduled',
+            priority,
             dedupeKey,
+            requestClass,
             queuedAt: this.now(),
             sequence: this.sequence++,
             run,
@@ -180,7 +189,10 @@ class AccountTaskRunner {
         }
 
         try {
-            task.resolve(await this.executionContext.run(task, task.run));
+            task.resolve(await runWithRequestClass(
+                task.requestClass,
+                () => this.executionContext.run(task, task.run),
+            ));
         } catch (error) {
             task.reject(error);
         } finally {

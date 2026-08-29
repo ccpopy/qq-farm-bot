@@ -54,7 +54,7 @@ async function runSmartSnapshotCase(t, status) {
     const network = require('../dist/utils/network');
     const farmApi = require('../dist/services/farm/api');
     const landAnalysis = require('../dist/services/farm/land-analysis');
-    const planting = require('../dist/services/farm/planting');
+    const fertilizer = require('../dist/services/farm/fertilizer');
     const visitStrategy = require('../dist/services/friend/visit-strategy');
     const schedulerModulePath = require.resolve('../dist/services/farm/scheduler');
     const originals = {
@@ -65,7 +65,7 @@ async function runSmartSnapshotCase(t, status) {
         farming: farmApi.farming,
         analyzeLands: landAnalysis.analyzeLands,
         getCleanableFarmSocialEventItemIds: landAnalysis.getCleanableFarmSocialEventItemIds,
-        runFertilizerByConfig: planting.runFertilizerByConfig,
+        runFertilizerByConfig: fertilizer.runFertilizerByConfig,
         inFarmQuietHours: visitStrategy.inFarmQuietHours,
     };
     t.after(() => {
@@ -76,7 +76,7 @@ async function runSmartSnapshotCase(t, status) {
         farmApi.farming = originals.farming;
         landAnalysis.analyzeLands = originals.analyzeLands;
         landAnalysis.getCleanableFarmSocialEventItemIds = originals.getCleanableFarmSocialEventItemIds;
-        planting.runFertilizerByConfig = originals.runFertilizerByConfig;
+        fertilizer.runFertilizerByConfig = originals.runFertilizerByConfig;
         visitStrategy.inFarmQuietHours = originals.inFarmQuietHours;
         delete require.cache[schedulerModulePath];
     });
@@ -94,7 +94,7 @@ async function runSmartSnapshotCase(t, status) {
     farmApi.farming = async () => ({});
     landAnalysis.analyzeLands = () => emptyFarmStatus(status);
     landAnalysis.getCleanableFarmSocialEventItemIds = () => [];
-    planting.runFertilizerByConfig = async (_landIds, options) => {
+    fertilizer.runFertilizerByConfig = async (_landIds, options) => {
         fertilizerOptions = options;
         return { normal: 0, organic: 0 };
     };

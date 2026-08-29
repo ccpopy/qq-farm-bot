@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const { AccountTaskRunner } = require('../dist/app/account-task-runner');
+const { getAmbientRequestClass, runWithRequestClass } = require('../dist/utils/request-context');
 
 function deferred() {
     let resolve;
@@ -238,6 +239,28 @@ test('task steps run directly without creating a queue when no parent task exist
     assert.equal(await runner.runStep('friend.phase.enter', () => 'entered'), 'entered');
     assert.equal(runner.getSnapshot().running, null);
     assert.deepEqual(runner.getSnapshot().queued, []);
+});
+
+test('queued account tasks retain the request class captured when submitted', async () => {
+    const runner = new AccountTaskRunner();
+    const gate = deferred();
+    const active = runner.submit('active', () => gate.promise);
+    await new Promise(setImmediate);
+
+    const friend = runWithRequestClass('friend', () => runner.submit(
+        'friend.visit',
+        () => getAmbientRequestClass(),
+        { priority: 'scheduled' },
+    ));
+    const farm = runWithRequestClass('farm', () => runner.submit(
+        'farm.check',
+        () => getAmbientRequestClass(),
+        { priority: 'scheduled' },
+    ));
+
+    gate.resolve();
+    await active;
+    assert.deepEqual(await Promise.all([friend, farm]), ['friend', 'farm']);
 });
 
 test('closing the queue lets the active slice finish and rejects the next submission', async () => {
