@@ -11,6 +11,7 @@ const {
     submitAccountTask,
 } = require('../app/account-task-runner');
 const { BackgroundJob } = require('../app/background-job');
+const { runStartupSequence } = require('../app/startup-sequence');
 const { executeWorkerApiCall } = require('../app/worker-api-dispatcher');
 const { runClaimedInviteBatch } = require('../app/worker-invite-batch');
 const { createWorkerApiRegistry } = require('../app/worker-api-registry');
@@ -415,45 +416,6 @@ function stopMysteryShopTimer(): void {
     workerScheduler.clear('mystery_shop_after_save');
 }
 
-function clearStartupStaggerTasks(): void {
-    for (const name of [
-        'startup_start_farm',
-        'startup_start_friend',
-        'startup_daily_routines',
-        'startup_mystery_shop',
-    ]) {
-        workerScheduler.clear(name);
-    }
-}
-
-function scheduleStartupStaggeredTasks(): void {
-    clearStartupStaggerTasks();
-
-    // 先让连接和登录初始化稳定下来，再启动农场主流程。
-    workerScheduler.setTimeoutTask('startup_start_farm', 2000, () => {
-        if (!loginReady) return;
-        startFarmCheckLoop({ externalScheduler: true });
-        startUnifiedScheduler();
-    });
-
-    // 好友申请监听和好友巡田晚于农场启动，避免登录瞬间同时拉好友链路。
-    workerScheduler.setTimeoutTask('startup_start_friend', 8000, () => {
-        if (!loginReady) return;
-        startFriendCheckLoop({ externalScheduler: true });
-    });
-
-    // 好友统一任务包含偷菜、帮助和放虫放草；这里仅启动统一调度，不单独启动子任务。
-    // 每日礼包/任务不参与登录启动关键路径。
-    workerScheduler.setTimeoutTask('startup_daily_routines', 45000, () => {
-        if (loginReady) startDailyRoutineTimer(true);
-    });
-
-    // 神秘商店属于低频后台能力，最后启动。
-    workerScheduler.setTimeoutTask('startup_mystery_shop', 60000, () => {
-        if (loginReady) startMysteryShopTimer();
-    });
-}
-
 function runMysteryShopTick(): Promise<void> {
     if (!loginReady) return Promise.resolve();
     const {
@@ -472,7 +434,7 @@ function runMysteryShopTick(): Promise<void> {
     });
 }
 
-function startMysteryShopTimer(): void {
+function startMysteryShopTimer(options: { runInitial?: boolean } = {}): void {
     const {
         isMysteryShopWatchEnabled,
         AUTO_BUY_CHECK_INTERVAL_MS,
@@ -480,12 +442,22 @@ function startMysteryShopTimer(): void {
     } = require('../services/mystery-shop-auto');
     stopMysteryShopTimer();
     if (!loginReady || !isMysteryShopWatchEnabled(getAutomation())) return;
-    workerScheduler.setTimeoutTask('mystery_shop_initial', AUTO_BUY_INITIAL_DELAY_MS, () => {
-        runMysteryShopTick().catch(() => null);
-    });
+    if (options.runInitial !== false) {
+        workerScheduler.setTimeoutTask('mystery_shop_initial', AUTO_BUY_INITIAL_DELAY_MS, () => {
+            runMysteryShopTick().catch(() => null);
+        });
+    }
     workerScheduler.setIntervalTask('mystery_shop_interval', AUTO_BUY_CHECK_INTERVAL_MS, () => {
         runMysteryShopTick().catch(() => null);
     });
+}
+
+function startAutomationRuntime(): void {
+    startFarmCheckLoop({ externalScheduler: true });
+    startFriendCheckLoop({ externalScheduler: true });
+    startUnifiedScheduler();
+    startDailyRoutineTimer(false);
+    startMysteryShopTimer({ runInitial: false });
 }
 
 function applyRuntimeConfig(snapshot: any, syncNow: boolean = false): number {
@@ -757,10 +729,30 @@ async function startBot(config: any): Promise<void> {
         }
 
         if (!canContinueLogin()) return;
-        scheduleStartupStaggeredTasks();
-
-        // 立即发送一次状态
         syncStatus();
+        await runWithRequestClass('farm', () => runStartupSequence({
+            steps: [
+                { name: 'daily-routines', run: () => runDailyRoutines(true) },
+                {
+                    name: 'task-claim',
+                    run: () => submitAccountTask('task.claim', checkAndClaimTasks, {
+                        priority: 'maintenance',
+                        dedupeKey: 'task.claim',
+                    }),
+                },
+                { name: 'mystery-shop', run: runMysteryShopTick },
+            ],
+            canContinue: () => loginReady && canContinueLogin(),
+            activateRuntime: startAutomationRuntime,
+            onStepError: (name: string, error: any) => {
+                log('系统', `启动步骤 ${name} 失败: ${error?.message || error}`, {
+                    module: 'system',
+                    event: '启动序列',
+                    result: 'error',
+                    step: name,
+                });
+            },
+        }));
     };
 
     connect(code, onLoginSuccess);

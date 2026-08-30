@@ -10,6 +10,7 @@ function loadFertilizerWithStubs(t, options = {}) {
         getAutomation: store.getAutomation,
         getAllLands: farmApi.getAllLands,
         fertilize: farmApi.fertilize,
+        fertilizeOne: farmApi.fertilizeOne,
         fertilizeOrganicLoop: farmApi.fertilizeOrganicLoop,
         normalizeFertilizerLandTypes: landAnalysis.normalizeFertilizerLandTypes,
         formatFertilizerLandTypes: landAnalysis.formatFertilizerLandTypes,
@@ -34,6 +35,7 @@ function loadFertilizerWithStubs(t, options = {}) {
         calls.normalTargets.push([...targets]);
         return options.normalFertilized || 0;
     };
+    farmApi.fertilizeOne = async () => options.fertilizeOneReply;
     farmApi.fertilizeOrganicLoop = async (targets) => {
         calls.organicTargets.push([...targets]);
         return 0;
@@ -51,6 +53,7 @@ function loadFertilizerWithStubs(t, options = {}) {
         Object.assign(farmApi, {
             getAllLands: originals.getAllLands,
             fertilize: originals.fertilize,
+            fertilizeOne: originals.fertilizeOne,
             fertilizeOrganicLoop: originals.fertilizeOrganicLoop,
         });
         Object.assign(landAnalysis, {
@@ -117,4 +120,17 @@ test('smart fertilizer retries one fresh read when the decision read failed', as
 
     assert.equal(calls.reads, 2);
     assert.deepEqual(calls.organicTargets, [[33]]);
+});
+
+test('manual fertilizer reports remaining seconds from the decoded fertilizer item', async (t) => {
+    const { fertilizer } = loadFertilizerWithStubs(t, {
+        fertilizeOneReply: {
+            land: [],
+            fertilizer: { id: 1011, count: 498268 },
+        },
+    });
+
+    const result = await fertilizer.fertilizeOwnLand(1, 'normal');
+
+    assert.equal(result.fertilizerRemainingSec, 498268);
 });
