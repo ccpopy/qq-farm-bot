@@ -20,6 +20,88 @@ test('unknown worker methods preserve the existing error response', async () => 
     assert.deepEqual(response, { result: null, error: 'Unknown method' });
 });
 
+test('worker API errors preserve activity stage and trace diagnostics', async () => {
+    const failure = new Error('activity state missing');
+    failure.code = 'CHARITY_RED_FLOWER_STATE_MISSING';
+    failure.activityStage = 'charity.state.find';
+    failure.activityTraceId = 'charity-9';
+    const registry = new Map([
+        ['getCharity', definition(() => { throw failure; }, { execution: 'direct' })],
+    ]);
+
+    const response = await executeWorkerApiCall('getCharity', [], registry, {
+        isAccountReady: () => true,
+        submitTask: async () => null,
+    });
+
+    assert.deepEqual(response, {
+        result: null,
+        error: {
+            message: 'activity state missing',
+            code: 'CHARITY_RED_FLOWER_STATE_MISSING',
+            name: 'Error',
+            activityStage: 'charity.state.find',
+            activityTraceId: 'charity-9',
+        },
+    });
+});
+
+test('worker API errors preserve gateway diagnostics across IPC', async () => {
+    const failure = new Error('ActivityService.List failed');
+    failure.code = 1099999;
+    failure.serviceName = 'gamepb.activitypb.ActivityService';
+    failure.methodName = 'List';
+    failure.errorMessage = 'service unavailable';
+    failure.clientSeq = 72;
+    const registry = new Map([
+        ['getCharity', definition(() => { throw failure; }, { execution: 'direct' })],
+    ]);
+
+    const response = await executeWorkerApiCall('getCharity', ['activity-trace-1'], registry, {
+        isAccountReady: () => true,
+        submitTask: async () => null,
+    });
+
+    assert.deepEqual(response, {
+        result: null,
+        error: {
+            message: 'ActivityService.List failed',
+            code: 1099999,
+            name: 'Error',
+            activityStage: 'worker.execute',
+            activityTraceId: 'activity-trace-1',
+            serviceName: 'gamepb.activitypb.ActivityService',
+            methodName: 'List',
+            errorMessage: 'service unavailable',
+            clientSeq: 72,
+        },
+    });
+});
+
+test('queued activity calls identify scheduler failures before execution', async () => {
+    const registry = new Map([
+        ['getCharity', definition(() => 42)],
+    ]);
+
+    const response = await executeWorkerApiCall('getCharity', ['activity-trace-2'], registry, {
+        isAccountReady: () => true,
+        submitTask: async () => {
+            throw new Error('queue stopped');
+        },
+    });
+
+    assert.deepEqual(response, {
+        result: null,
+        error: {
+            message: 'queue stopped',
+            code: undefined,
+            name: 'Error',
+            activityStage: 'worker.queue',
+            activityTraceId: 'activity-trace-2',
+        },
+    });
+});
+
 test('connected queued methods use the interactive account queue', async () => {
     const submissions = [];
     const registry = new Map([

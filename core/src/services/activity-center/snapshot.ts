@@ -105,16 +105,17 @@ function buildActivityDirectory(windows: any[], season: any, shop: any, solarTer
     }));
 }
 
-async function buildActivityCenterSnapshot(shopOverride: any = null) {
+async function buildActivityCenterSnapshot(shopOverride: any = null, traceInput: unknown = null) {
     // 星座 type=21 是写操作，读取快照只能使用赛季发现信息和最近一次写操作回包。
     // Gateway calls are intentionally serial. The game connection can stop
     // responding when activity metadata and bag reads are sent as one burst.
+    const traceId = String(traceInput || '').trim();
     const seasonResult = await settleRequest(querySeason);
     const solarResult = await settleRequest(querySolarTerms);
-    const activityListResult = await settleRequest(getActivityWindows);
+    const activityListResult = await settleRequest(() => getActivityWindows({ traceId, consumer: 'activity-snapshot' }));
     const qixiResult = await settleRequest(getCurrentQixiActivity);
     const qingMeiResult = await settleRequest(getCurrentQingMeiActivity);
-    const charityResult = await settleRequest(getCurrentCharityRedFlowerActivity);
+    const charityResult = await settleRequest(() => getCurrentCharityRedFlowerActivity(traceId));
     const weatherResult = await settleRequest(weatherActivityService.getCurrentWeatherActivity);
     const rawSeason = settledValue(seasonResult);
     const season = rawSeason ? normalizeSeason(rawSeason) : null;
@@ -189,11 +190,11 @@ async function buildActivityCenterSnapshot(shopOverride: any = null) {
     };
 }
 
-function getActivityCenterSnapshot(shopOverride: any = null) {
-    if (shopOverride) return buildActivityCenterSnapshot(shopOverride);
+function getActivityCenterSnapshot(shopOverride: any = null, traceInput: unknown = null) {
+    if (shopOverride) return buildActivityCenterSnapshot(shopOverride, traceInput);
     if (pendingSnapshotRequest) return pendingSnapshotRequest;
 
-    const request = buildActivityCenterSnapshot();
+    const request = buildActivityCenterSnapshot(null, traceInput);
     pendingSnapshotRequest = request;
     request.then(() => {
         if (pendingSnapshotRequest === request) pendingSnapshotRequest = null;
@@ -203,8 +204,9 @@ function getActivityCenterSnapshot(shopOverride: any = null) {
     return request;
 }
 
-async function getActivityDirectorySnapshot() {
-    const activityWindows = await getActivityWindows();
+async function getActivityDirectorySnapshot(traceInput: unknown = null) {
+    const traceId = String(traceInput || '').trim();
+    const activityWindows = await getActivityWindows({ traceId, consumer: 'activity-directory' });
     return {
         serverTime: getServerTimeSec(),
         activities: buildActivityDirectory(activityWindows, null, null, null, null, null, null, null, null),

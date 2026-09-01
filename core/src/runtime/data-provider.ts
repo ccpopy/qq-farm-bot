@@ -166,22 +166,22 @@ function createDataProvider(options: DataProviderOptions) {
             callWorkerApi(resolveAccountRefId(accountRef), 'getPetProtectLogs')
         ),
         getDailyGifts: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getDailyGiftOverview'),
-        getActivityDirectorySnapshot: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getActivityDirectorySnapshot'),
-        getActivityCenterSnapshot: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getActivityCenterSnapshot'),
+        getActivityDirectorySnapshot: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getActivityDirectorySnapshot', traceId),
+        getActivityCenterSnapshot: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getActivityCenterSnapshot', traceId),
         getCurrentSeasonEvent: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentSeasonEvent'),
         getCurrentStellarActivity: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentStellarActivity'),
         getCurrentStarSandShop: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentStarSandShop'),
         getCurrentSolarTerms: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentSolarTerms'),
         getCurrentQixiActivity: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentQixiActivity'),
-        getCurrentCharityRedFlowerActivity: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentCharityRedFlowerActivity'),
-        acceptCharityRedFlowerAgreement: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'acceptCharityRedFlowerAgreement'),
-        shareCharityRedFlower: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'shareCharityRedFlower'),
-        claimCharityRedFlowerSeeds: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'claimCharityRedFlowerSeeds'),
-        donateCharityRedFlowerLove: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'donateCharityRedFlowerLove'),
-        claimCharityRedFlowerProgressReward: (accountRef: string, target: unknown) => (
-            callWorkerApi(resolveAccountRefId(accountRef), 'claimCharityRedFlowerProgressReward', target)
+        getCurrentCharityRedFlowerActivity: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentCharityRedFlowerActivity', traceId),
+        acceptCharityRedFlowerAgreement: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'acceptCharityRedFlowerAgreement', traceId),
+        shareCharityRedFlower: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'shareCharityRedFlower', traceId),
+        claimCharityRedFlowerSeeds: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'claimCharityRedFlowerSeeds', traceId),
+        donateCharityRedFlowerLove: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'donateCharityRedFlowerLove', traceId),
+        claimCharityRedFlowerProgressReward: (accountRef: string, target: unknown, traceId?: string) => (
+            callWorkerApi(resolveAccountRefId(accountRef), 'claimCharityRedFlowerProgressReward', target, traceId)
         ),
-        claimCharityRedFlowerDailyGift: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'claimCharityRedFlowerDailyGift'),
+        claimCharityRedFlowerDailyGift: (accountRef: string, traceId?: string) => callWorkerApi(resolveAccountRefId(accountRef), 'claimCharityRedFlowerDailyGift', traceId),
         getCurrentWeatherActivity: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentWeatherActivity'),
         buyWeatherBottle: (accountRef: string, count: unknown) => callWorkerApi(resolveAccountRefId(accountRef), 'buyWeatherBottle', count),
         collectWeatherBottle: (accountRef: string, targetGid: unknown) => callWorkerApi(resolveAccountRefId(accountRef), 'collectWeatherBottle', targetGid),

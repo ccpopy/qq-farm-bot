@@ -35,6 +35,16 @@ interface WorkerManagerOptions {
     onWorkerLog?: (entry: any, accountId: string, accountName?: string) => void;
 }
 
+interface WorkerApiFailure extends Error {
+    code?: string | number;
+    activityStage?: string;
+    activityTraceId?: string;
+    serviceName?: string;
+    methodName?: string;
+    errorMessage?: string;
+    clientSeq?: number;
+}
+
 function createWorkerManager(options: WorkerManagerOptions) {
     const {
         fork,
@@ -232,11 +242,19 @@ function createWorkerManager(options: WorkerManagerOptions) {
         stopWorker(accountId);
     }
 
-    function errorFromWorkerPayload(payload: any): Error & { code?: string | number } {
+    function errorFromWorkerPayload(payload: any): WorkerApiFailure {
         if (!payload || typeof payload !== 'object') return new Error(String(payload || 'Worker API error'));
-        const error: Error & { code?: string | number } = new Error(String(payload.message || 'Worker API error'));
+        const error: WorkerApiFailure = new Error(String(payload.message || 'Worker API error'));
         if (payload.name) error.name = String(payload.name);
         if (payload.code !== undefined && payload.code !== null && payload.code !== '') error.code = payload.code;
+        if (payload.activityStage) error.activityStage = String(payload.activityStage);
+        if (payload.activityTraceId) error.activityTraceId = String(payload.activityTraceId);
+        if (payload.serviceName) error.serviceName = String(payload.serviceName);
+        if (payload.methodName) error.methodName = String(payload.methodName);
+        if (payload.errorMessage) error.errorMessage = String(payload.errorMessage);
+        if (payload.clientSeq !== undefined && payload.clientSeq !== null) {
+            error.clientSeq = Number(payload.clientSeq) || 0;
+        }
         return error;
     }
 

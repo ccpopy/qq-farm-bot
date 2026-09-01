@@ -21,11 +21,12 @@ const emit = defineEmits<{
   donateLove: []
   claimProgressReward: [target: string]
   claimDailyGift: []
+  retry: []
 }>()
 
 const confirmingDonate = ref(false)
 const agreementDialogOpen = ref(false)
-const agreementRequired = computed(() => props.activity?.agreementStatus !== '1')
+const agreementRequired = computed(() => !!props.activity && props.activity.agreementStatus !== '1')
 
 const globalPercent = computed(() => {
   const donated = Number(props.activity?.globalProgress.donated || 0)
@@ -130,7 +131,11 @@ function acceptAgreement() {
 watch(() => props.activity?.loveBalance, () => confirmingDonate.value = false)
 watch(
   () => [props.activity?.activityId, props.activity?.agreementStatus] as const,
-  ([, agreementStatus]) => {
+  ([activityId, agreementStatus]) => {
+    if (!activityId) {
+      agreementDialogOpen.value = false
+      return
+    }
     if (agreementStatus === '1') {
       agreementDialogOpen.value = false
       return
@@ -441,12 +446,11 @@ watch(
 
     <div v-else class="empty-state">
       <span class="i-carbon-favorite" />
-      <strong>当前账号暂未发现公益小红花活动</strong>
-      <p>可能尚未完成腾讯公益平台授权，确认授权后会重新拉取活动状态。</p>
-      <button type="button" :disabled="pendingAgreement" @click="openAgreement">
-        <span v-if="pendingAgreement" class="i-carbon-circle-dash animate-spin" />
-        <span v-else class="i-carbon-user-certification" />
-        {{ pendingAgreement ? '授权并刷新中' : '检查并完成授权' }}
+      <strong>公益小红花活动详情读取失败</strong>
+      <p>这不代表账号未授权。请重新加载；若仍失败，错误提示中的阶段和追踪编号可用于定位具体链路。</p>
+      <button type="button" @click="emit('retry')">
+        <span class="i-carbon-renew" />
+        重新加载活动
       </button>
     </div>
 

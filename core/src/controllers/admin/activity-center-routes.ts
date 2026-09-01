@@ -3,6 +3,10 @@ import type { AdminContext } from './context';
 export {};
 
 const { getAccId } = require('./middleware');
+const { createModuleLogger, redactString } = require('../../services/logger');
+
+const activityLogger = createModuleLogger('activity-api');
+let nextActivityRequestSequence = 1;
 
 const ACTIVITY_ERROR_MESSAGES: Record<string, string> = {
     '1034014': '今日青梅种子已经领取，无需重复领取',
@@ -28,6 +32,7 @@ const ACTIVITY_ERROR_MESSAGES: Record<string, string> = {
     QIXI_RESPONSE_INVALID: '鹊桥活动数据已经变化，请刷新页面后重试',
     QIXI_GIFT_FAILED: '鹊羽香囊赠送失败，请刷新后重试',
     CHARITY_RED_FLOWER_UNAVAILABLE: '公益小红花活动暂未开放或已经结束',
+    CHARITY_RED_FLOWER_STATE_MISSING: '已发现公益小红花入口，但活动详情读取失败；请刷新或重启账号后重试',
     CHARITY_RED_FLOWER_RESPONSE_INVALID: '公益小红花活动数据已经变化，请刷新页面后重试',
     CHARITY_AGREEMENT_REJECTED: '公益平台未确认授权，请重新勾选协议后再试',
     CHARITY_SEEDS_UNAVAILABLE: '当前没有可领取的小红花种子',
@@ -71,79 +76,169 @@ const ACTIVITY_ERROR_MESSAGES: Record<string, string> = {
     '1034040': '当前这轮雷雨已经采过，下轮雷雨可再次采集',
 };
 
-function activityErrorResponse(error: any): { code: string; message: string } {
-    const rawMessage = String(error?.message || error || '活动操作失败');
-    const protocolCode = String(error?.code || rawMessage.match(/\bcode=(\d+)\b/)?.[1] || '');
-    const friendlyMessage = ACTIVITY_ERROR_MESSAGES[protocolCode];
-    if (friendlyMessage) return { code: protocolCode, message: friendlyMessage };
-
-    if (rawMessage.includes('当前没有可领取的游记奖励')) {
-        return { code: 'NO_PASS_REWARD', message: '当前没有可领取的游记奖励，请完成新的游记等级后再试' };
-    }
-    if (rawMessage.includes('指定节令当前不可领取')) {
-        return { code: 'SOLAR_TERM_UNAVAILABLE', message: '当前节令奖励暂不可领取，请在开放后再试' };
-    }
-    if (rawMessage.includes('服务端未发现星座活动')) {
-        return { code: 'CONSTELLATION_UNAVAILABLE', message: '观星礼录活动暂未开放或已经结束' };
-    }
-    if (rawMessage.includes('服务端未发现可用游记')) {
-        return { code: 'PASS_UNAVAILABLE', message: '千星游记活动暂未开放或已经结束' };
-    }
-    if (rawMessage.includes('服务端未发现指定节令')) {
-        return { code: 'SOLAR_TERM_NOT_FOUND', message: '未找到该节令活动，请刷新页面后再试' };
-    }
-    if (rawMessage.includes('当前赛季未发现活动商店')) {
-        return { code: 'SHOP_UNAVAILABLE', message: '星砂商店暂未开放，请稍后再来看看' };
-    }
-    if (rawMessage.includes('当前赛季数据为空')) {
-        return { code: 'SEASON_UNAVAILABLE', message: '当前活动数据暂未开放，请稍后刷新重试' };
-    }
-    if (rawMessage.includes('termId 必须')) {
-        return { code: 'INVALID_SOLAR_TERM', message: '节令信息已失效，请刷新页面后重试' };
-    }
-    if (rawMessage === '账号未运行' || rawMessage === '账号已离线') {
-        return { code: 'ACCOUNT_OFFLINE', message: '当前账号尚未运行，请先启动账号后再试' };
-    }
-    if (rawMessage === 'API Timeout' || rawMessage.includes('请求超时')) {
-        return { code: 'ACTIVITY_TIMEOUT', message: '活动服务响应超时，请稍后重试' };
-    }
-    if (rawMessage.includes('连接未打开') || rawMessage.includes('账号尚未登录')) {
-        return { code: 'GAME_OFFLINE', message: '游戏连接尚未就绪，请稍后重试' };
-    }
-    if (rawMessage.includes('请求队列已满')) {
-        return { code: 'ACTIVITY_BUSY', message: '活动操作过于频繁，请稍后再试' };
-    }
-    if (rawMessage.includes('发送失败') || rawMessage.includes('请求被中断')) {
-        return { code: 'ACTIVITY_REQUEST_INTERRUPTED', message: '活动请求未能完成，请稍后重试' };
-    }
-    if (rawMessage.includes('不匹配的活动 ID') || rawMessage.includes('未知操作类型') || rawMessage.includes('回包缺少动态状态')) {
-        return { code: 'ACTIVITY_DATA_CHANGED', message: '活动数据已经更新，请刷新页面后再试' };
-    }
-    return { code: protocolCode || 'ACTIVITY_OPERATION_FAILED', message: '活动操作失败，请刷新页面后重试' };
+function activityRequestTraceId(): string {
+    const sequence = nextActivityRequestSequence++;
+    return `activity-${Date.now().toString(36)}-${sequence.toString(36)}`;
 }
 
-function handleActivityApiError(res: Response, error: any): Response {
+function activityErrorResponse(error: any): { code: string; message: string; stage?: string; traceId?: string } {
+    const rawMessage = String(error?.message || error || '活动操作失败');
+    const protocolCode = String(error?.code || rawMessage.match(/\bcode=(\d+)\b/)?.[1] || '');
+    const activityStage = String(error?.activityStage || '');
+    const activityTraceId = String(error?.activityTraceId || '');
+    const diagnostic = (code: string, message: string, defaultStage = '') => ({
+        code,
+        message,
+        ...(activityStage || defaultStage ? { stage: activityStage || defaultStage } : {}),
+        ...(activityTraceId ? { traceId: activityTraceId } : {}),
+    });
+    const friendlyMessage = ACTIVITY_ERROR_MESSAGES[protocolCode];
+    if (friendlyMessage) return diagnostic(protocolCode, friendlyMessage);
+
+    if (rawMessage === 'Unknown method' || rawMessage.includes('Unknown method')) {
+        return diagnostic(
+            'WORKER_API_VERSION_MISMATCH',
+            '账号进程仍在运行旧版本，请重启该账号或服务后重试',
+            'worker.dispatch',
+        );
+    }
+    if (rawMessage.includes("Cannot read properties of undefined (reading 'encode')")) {
+        return diagnostic(
+            'ACTIVITY_PROTO_NOT_READY',
+            '活动协议定义未正确加载，请重新构建并重启账号后重试',
+            'activity.proto.encode',
+        );
+    }
+
+    if (rawMessage.includes('当前没有可领取的游记奖励')) {
+        return diagnostic('NO_PASS_REWARD', '当前没有可领取的游记奖励，请完成新的游记等级后再试');
+    }
+    if (rawMessage.includes('指定节令当前不可领取')) {
+        return diagnostic('SOLAR_TERM_UNAVAILABLE', '当前节令奖励暂不可领取，请在开放后再试');
+    }
+    if (rawMessage.includes('服务端未发现星座活动')) {
+        return diagnostic('CONSTELLATION_UNAVAILABLE', '观星礼录活动暂未开放或已经结束');
+    }
+    if (rawMessage.includes('服务端未发现可用游记')) {
+        return diagnostic('PASS_UNAVAILABLE', '千星游记活动暂未开放或已经结束');
+    }
+    if (rawMessage.includes('服务端未发现指定节令')) {
+        return diagnostic('SOLAR_TERM_NOT_FOUND', '未找到该节令活动，请刷新页面后再试');
+    }
+    if (rawMessage.includes('当前赛季未发现活动商店')) {
+        return diagnostic('SHOP_UNAVAILABLE', '星砂商店暂未开放，请稍后再来看看');
+    }
+    if (rawMessage.includes('当前赛季数据为空')) {
+        return diagnostic('SEASON_UNAVAILABLE', '当前活动数据暂未开放，请稍后刷新重试');
+    }
+    if (rawMessage.includes('termId 必须')) {
+        return diagnostic('INVALID_SOLAR_TERM', '节令信息已失效，请刷新页面后重试');
+    }
+    if (rawMessage === '账号未运行' || rawMessage === '账号已离线') {
+        return diagnostic('ACCOUNT_OFFLINE', '当前账号尚未运行，请先启动账号后再试');
+    }
+    if (rawMessage === 'API Timeout' || rawMessage.includes('请求超时')) {
+        return diagnostic('ACTIVITY_TIMEOUT', '活动服务响应超时，请稍后重试');
+    }
+    if (rawMessage.includes('连接未打开') || rawMessage.includes('账号尚未登录')) {
+        return diagnostic('GAME_OFFLINE', '游戏连接尚未就绪，请稍后重试');
+    }
+    if (rawMessage.includes('请求队列已满')) {
+        return diagnostic('ACTIVITY_BUSY', '活动操作过于频繁，请稍后再试');
+    }
+    if (rawMessage.includes('发送失败') || rawMessage.includes('请求被中断')) {
+        return diagnostic('ACTIVITY_REQUEST_INTERRUPTED', '活动请求未能完成，请稍后重试');
+    }
+    if (rawMessage.includes('不匹配的活动 ID') || rawMessage.includes('未知操作类型') || rawMessage.includes('回包缺少动态状态')) {
+        return diagnostic('ACTIVITY_DATA_CHANGED', '活动数据已经更新，请刷新页面后再试');
+    }
+    if (/^\d+$/.test(protocolCode)) {
+        const serverMessage = redactString(error?.errorMessage || '').trim();
+        return diagnostic(
+            protocolCode,
+            serverMessage
+                ? `活动服务返回错误 ${protocolCode}：${serverMessage}`
+                : `活动服务返回错误 ${protocolCode}，请稍后重试`,
+        );
+    }
+
+    const safeMessage = redactString(rawMessage).trim().slice(0, 300);
+    return diagnostic(
+        protocolCode || 'ACTIVITY_OPERATION_FAILED',
+        safeMessage ? `活动链路失败：${safeMessage}` : '活动操作失败，请刷新页面后重试',
+    );
+}
+
+function handleActivityApiError(
+    res: Response,
+    error: any,
+    context: { accountId: string; method: string; path: string; traceId: string; startedAt?: number },
+): Response {
     const result = activityErrorResponse(error);
-    return res.json({ ok: false, error: result.message, errorCode: result.code });
+    activityLogger.warn('活动接口调用失败', {
+        event: 'activity_api_failure',
+        accountId: context.accountId,
+        requestMethod: context.method,
+        requestPath: context.path,
+        traceId: result.traceId || context.traceId,
+        stage: result.stage || 'activity.api',
+        resultKind: result.code,
+        durationMs: context.startedAt ? Date.now() - context.startedAt : 0,
+        failureMessage: String(error?.message || error || result.message),
+        ...(error?.serviceName ? { gatewayService: String(error.serviceName) } : {}),
+        ...(error?.methodName ? { gatewayMethod: String(error.methodName) } : {}),
+        ...(error?.clientSeq !== undefined && error?.clientSeq !== null
+            ? { gatewayClientSeq: Number(error.clientSeq) || 0 }
+            : {}),
+    });
+    return res.json({
+        ok: false,
+        error: result.message,
+        errorCode: result.code,
+        ...(result.stage ? { errorStage: result.stage } : {}),
+        traceId: result.traceId || context.traceId,
+    });
 }
 
 function mountActivityCenterRoutes(app: Application, ctx: AdminContext): void {
-    const withAccount = (handler: (accountId: string, req: Request, res: Response) => Promise<any>) => {
+    const withAccount = (handler: (accountId: string, req: Request, res: Response, traceId: string) => Promise<any>) => {
         return async (req: Request, res: Response) => {
             const accountId = getAccId(ctx, req);
             if (!accountId) return res.status(400).json({ ok: false, error: 'Missing x-account-id' });
+            const traceId = activityRequestTraceId();
+            const startedAt = Date.now();
             try {
-                const data = await handler(accountId, req, res);
-                if (!res.headersSent) return res.json({ ok: true, data });
+                const data = await handler(accountId, req, res, traceId);
+                if (!res.headersSent) {
+                    activityLogger.info('活动接口调用完成', {
+                        event: 'activity_api_ready',
+                        accountId,
+                        requestMethod: req.method,
+                        requestPath: req.path,
+                        traceId,
+                        stage: 'activity.api.ready',
+                        durationMs: Date.now() - startedAt,
+                    });
+                    return res.json({ ok: true, data });
+                }
                 return undefined;
             } catch (error: any) {
-                return handleActivityApiError(res, error);
+                if (error && typeof error === 'object' && !error.activityTraceId) error.activityTraceId = traceId;
+                return handleActivityApiError(res, error, {
+                    accountId,
+                    method: req.method,
+                    path: req.path,
+                    traceId,
+                    startedAt,
+                });
             }
         };
     };
 
     const mountGet = (path: string, providerMethod: string): void => {
-        app.get(path, withAccount((accountId: string) => ctx.provider[providerMethod](accountId)));
+        app.get(path, withAccount((accountId: string, _req: Request, _res: Response, traceId: string) => (
+            ctx.provider[providerMethod](accountId, traceId)
+        )));
     };
 
     mountGet('/api/activity-center/activities', 'getActivityDirectorySnapshot');
@@ -199,28 +294,28 @@ function mountActivityCenterRoutes(app: Application, ctx: AdminContext): void {
         ctx.provider.claimQixiBridgeRewards(accountId)
     )));
 
-    app.post('/api/activity-center/charity-red-flower/seeds/claim', withAccount((accountId: string) => (
-        ctx.provider.claimCharityRedFlowerSeeds(accountId)
+    app.post('/api/activity-center/charity-red-flower/seeds/claim', withAccount((accountId: string, _req: Request, _res: Response, traceId: string) => (
+        ctx.provider.claimCharityRedFlowerSeeds(accountId, traceId)
     )));
-    app.post('/api/activity-center/charity-red-flower/agreement/accept', withAccount((accountId: string) => (
-        ctx.provider.acceptCharityRedFlowerAgreement(accountId)
+    app.post('/api/activity-center/charity-red-flower/agreement/accept', withAccount((accountId: string, _req: Request, _res: Response, traceId: string) => (
+        ctx.provider.acceptCharityRedFlowerAgreement(accountId, traceId)
     )));
-    app.post('/api/activity-center/charity-red-flower/share', withAccount((accountId: string) => (
-        ctx.provider.shareCharityRedFlower(accountId)
+    app.post('/api/activity-center/charity-red-flower/share', withAccount((accountId: string, _req: Request, _res: Response, traceId: string) => (
+        ctx.provider.shareCharityRedFlower(accountId, traceId)
     )));
-    app.post('/api/activity-center/charity-red-flower/love/donate', withAccount((accountId: string) => (
-        ctx.provider.donateCharityRedFlowerLove(accountId)
+    app.post('/api/activity-center/charity-red-flower/love/donate', withAccount((accountId: string, _req: Request, _res: Response, traceId: string) => (
+        ctx.provider.donateCharityRedFlowerLove(accountId, traceId)
     )));
-    app.post('/api/activity-center/charity-red-flower/progress/:target/claim', withAccount((accountId: string, req: Request, res: Response) => {
+    app.post('/api/activity-center/charity-red-flower/progress/:target/claim', withAccount((accountId: string, req: Request, res: Response, traceId: string) => {
         const target = String(req.params.target || '');
         if (!/^[1-9]\d*$/.test(target)) {
             res.status(400).json({ ok: false, error: 'target 必须是正十进制整数' });
             return Promise.resolve(undefined);
         }
-        return ctx.provider.claimCharityRedFlowerProgressReward(accountId, target);
+        return ctx.provider.claimCharityRedFlowerProgressReward(accountId, target, traceId);
     }));
-    app.post('/api/activity-center/charity-red-flower/daily-gift/claim', withAccount((accountId: string) => (
-        ctx.provider.claimCharityRedFlowerDailyGift(accountId)
+    app.post('/api/activity-center/charity-red-flower/daily-gift/claim', withAccount((accountId: string, _req: Request, _res: Response, traceId: string) => (
+        ctx.provider.claimCharityRedFlowerDailyGift(accountId, traceId)
     )));
 
     app.post('/api/activity-center/weather/research/light', withAccount((accountId: string, req: Request) => (
@@ -269,4 +364,4 @@ function mountActivityCenterRoutes(app: Application, ctx: AdminContext): void {
     )));
 }
 
-module.exports = { mountActivityCenterRoutes };
+module.exports = { mountActivityCenterRoutes, activityErrorResponse };

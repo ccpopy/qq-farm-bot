@@ -1684,6 +1684,7 @@ const activityErrorMessages: Record<string, string> = {
   1034091: '当前爱心不足，无法捐赠',
   1034092: '今天还没有收获小红花，暂时无法领取公益礼包',
   CHARITY_RED_FLOWER_UNAVAILABLE: '公益小红花活动暂未开放或已经结束',
+  CHARITY_RED_FLOWER_STATE_MISSING: '已发现公益小红花入口，但活动详情读取失败；请刷新或重启账号后重试',
   CHARITY_RED_FLOWER_RESPONSE_INVALID: '公益小红花活动数据已经变化，请刷新页面后重试',
   CHARITY_AGREEMENT_REJECTED: '公益平台未确认授权，请重新勾选协议后再试',
   CHARITY_SEEDS_UNAVAILABLE: '当前没有可领取的小红花种子',
@@ -1737,31 +1738,51 @@ const activityErrorMessages: Record<string, string> = {
   ACTIVITY_BUSY: '活动操作过于频繁，请稍后再试',
   ACTIVITY_REQUEST_INTERRUPTED: '活动请求未能完成，请稍后重试',
   ACTIVITY_DATA_CHANGED: '活动数据已经更新，请刷新页面后再试',
+  WORKER_API_VERSION_MISMATCH: '账号进程仍在运行旧版本，请重启该账号或服务后重试',
+  ACTIVITY_PROTO_NOT_READY: '活动协议定义未正确加载，请重新构建并重启账号后重试',
   ACTIVITY_OPERATION_FAILED: '活动操作失败，请刷新页面后重试',
 }
 
 function errorMessage(error: unknown, fallback = '活动数据加载失败') {
-  const candidate = error as { response?: { data?: { error?: unknown, message?: unknown, errorCode?: unknown } }, message?: unknown, code?: unknown }
+  const candidate = error as {
+    response?: { data?: { error?: unknown, message?: unknown, errorCode?: unknown, errorStage?: unknown, traceId?: unknown } }
+    message?: unknown
+    code?: unknown
+    activityStage?: unknown
+    activityTraceId?: unknown
+  }
   const rawMessage = String(candidate.response?.data?.error || candidate.response?.data?.message || candidate.message || '')
   const errorCode = String(candidate.response?.data?.errorCode || candidate.code || rawMessage.match(/\bcode=(\d+)\b/)?.[1] || '')
-  if (activityErrorMessages[errorCode])
-    return activityErrorMessages[errorCode]
+  const errorStage = String(candidate.response?.data?.errorStage || candidate.activityStage || '')
+  const traceId = String(candidate.response?.data?.traceId || candidate.activityTraceId || '')
+  const decorate = (message: string) => {
+    const diagnostics = [errorStage && `阶段 ${errorStage}`, traceId && `追踪 ${traceId}`].filter(Boolean)
+    return diagnostics.length ? `${message}（${diagnostics.join('，')}）` : message
+  }
+  if (activityErrorMessages[errorCode] && errorCode !== 'ACTIVITY_OPERATION_FAILED')
+    return decorate(activityErrorMessages[errorCode])
   if (rawMessage.includes('当前无可领取的奖励节点'))
-    return activityErrorMessages['1034038']!
+    return decorate(activityErrorMessages['1034038']!)
   if (rawMessage.includes('当前没有可领取的游记奖励'))
-    return activityErrorMessages.NO_PASS_REWARD!
+    return decorate(activityErrorMessages.NO_PASS_REWARD!)
   if (rawMessage.includes('指定节令当前不可领取'))
-    return activityErrorMessages.SOLAR_TERM_UNAVAILABLE!
+    return decorate(activityErrorMessages.SOLAR_TERM_UNAVAILABLE!)
   if (/gamepb\.|code=\d+|GatewayError/.test(rawMessage))
-    return fallback
-  return rawMessage || fallback
+    return decorate(fallback)
+  return decorate(rawMessage || fallback)
 }
 
 function responsePayload(value: unknown): unknown {
   const response = record(value)
   if (response.ok === false) {
-    const responseError = new Error(text(response.error, response.message, '活动接口返回失败')) as Error & { code?: string }
+    const responseError = new Error(text(response.error, response.message, '活动接口返回失败')) as Error & {
+      code?: string
+      activityStage?: string
+      activityTraceId?: string
+    }
     responseError.code = text(response.errorCode, response.error_code, response.code)
+    responseError.activityStage = text(response.errorStage, response.error_stage)
+    responseError.activityTraceId = text(response.traceId, response.trace_id)
     throw responseError
   }
   return response.data !== undefined ? response.data : value

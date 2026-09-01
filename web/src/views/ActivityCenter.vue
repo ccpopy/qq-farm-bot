@@ -569,13 +569,14 @@ onUnmounted(() => {
             :pending-donate="pendingActions.donateCharityLove"
             :pending-progress="pendingActions.claimCharityProgressReward"
             :pending-daily-gift="pendingActions.claimCharityDailyGift"
-            :authorization-error="pendingActions.acceptCharityAgreement || charity?.agreementStatus !== '1' ? actionError : ''"
+            :authorization-error="charity && charity.agreementStatus !== '1' ? actionError : ''"
             @accept-agreement="acceptCharityAgreement"
             @share="shareCharity"
             @claim-seeds="claimCharitySeeds"
             @donate-love="donateCharityLove"
             @claim-progress-reward="claimCharityProgressReward"
             @claim-daily-gift="claimCharityDailyGift"
+            @retry="refreshSelectedActivity"
           />
         </main>
       </template>
