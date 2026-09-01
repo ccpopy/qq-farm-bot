@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:compressed": "vite build --mode compressed",
     "build:analyze": "vite build --mode analyze",
+    "test": "node --test tests/*.test.mjs",
     "typecheck": "vue-tsc -b",
     "lint": "eslint \"src/**/*.{ts,vue}\" --fix",
     "preview": "vite preview"

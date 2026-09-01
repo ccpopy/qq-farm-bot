@@ -68,12 +68,12 @@ const isSoftRuntimeError = (err: any): boolean => {
     return message === '账号未运行' || message === 'API Timeout';
 };
 
-function handleApiError(res: Response, err: any): void {
-    if (isSoftRuntimeError(err)) {
-        res.json({ ok: false, error: err.message });
+function handleApiError(res: Response, err: any, extra: Record<string, unknown> = {}): void {
+  if (isSoftRuntimeError(err)) {
+        res.json({ ok: false, error: err.message, ...extra });
         return;
     }
-    res.status(500).json({ ok: false, error: err.message });
+    res.status(500).json({ ok: false, error: err.message, ...extra });
 }
 
 function resolveAccId(ctx: AdminContext, rawRef: any): string {

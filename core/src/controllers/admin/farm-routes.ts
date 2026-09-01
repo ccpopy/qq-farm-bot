@@ -9,6 +9,8 @@ export {};
 
 const { getLevelExpProgress } = require('../../config/gameConfig');
 const store = require('../../models/store');
+const { createModuleLogger } = require('../../services/logger');
+const { randomUUID } = require('node:crypto');
 
 const {
     createAuthRequired,
@@ -16,6 +18,43 @@ const {
     handleApiError,
     resolveAccId,
 } = require('./middleware');
+
+const bagApiLogger = createModuleLogger('bag-api');
+
+async function runBagMutation(
+    res: Response,
+    action: 'use' | 'sell',
+    accountId: string,
+    requestMeta: Record<string, unknown>,
+    operation: () => Promise<any>,
+): Promise<void> {
+    const traceId = `bag-${action}-${randomUUID()}`;
+    const meta = {
+        event: 'bag_mutation',
+        action,
+        accountId,
+        traceId,
+        ...requestMeta,
+    };
+    let operationCompleted = false;
+    bagApiLogger.info('背包写操作开始', { ...meta, stage: 'route.start' });
+    try {
+        const data = await operation();
+        operationCompleted = true;
+        bagApiLogger.info('背包 Worker 写操作完成', { ...meta, stage: 'worker.complete' });
+        res.json({ ok: true, data, traceId });
+        bagApiLogger.info('背包写操作响应完成', { ...meta, stage: 'route.complete' });
+    } catch (error: any) {
+        const stage = operationCompleted ? 'route.serialize' : 'worker.execute';
+        bagApiLogger.warn('背包写操作失败', {
+            ...meta,
+            stage,
+            result: 'error',
+            failureMessage: String(error?.message || error || 'unknown error'),
+        });
+        if (!res.headersSent) handleApiError(res, error, { traceId });
+    }
+}
 
 function mountFarmRoutes(app: Application, ctx: AdminContext): void {
     const authRequired = createAuthRequired(ctx);
@@ -298,14 +337,16 @@ function mountFarmRoutes(app: Application, ctx: AdminContext): void {
         const id = getAccId(ctx, req);
         if (!id) return res.status(400).json({ ok: false, error: 'Missing x-account-id' });
 
-        try {
-            const { itemId, count, uid } = req.body;
-            if (!itemId) return res.status(400).json({ ok: false, error: '缺少 itemId' });
-            const data = await ctx.provider.useItem(id, Number(itemId), Math.max(1, Number(count) || 1), Number(uid) || 0);
-            res.json({ ok: true, data });
-        } catch (e: any) {
-            handleApiError(res, e);
-        }
+        const { itemId, count, uid } = req.body;
+        if (!itemId) return res.status(400).json({ ok: false, error: '缺少 itemId' });
+        const normalizedCount = Math.max(1, Number(count) || 1);
+        await runBagMutation(
+            res,
+            'use',
+            id,
+            { itemId: Number(itemId), count: normalizedCount },
+            () => ctx.provider.useItem(id, Number(itemId), normalizedCount, Number(uid) || 0),
+        );
     });
 
     // API: 出售背包物品
@@ -313,16 +354,17 @@ function mountFarmRoutes(app: Application, ctx: AdminContext): void {
         const id = getAccId(ctx, req);
         if (!id) return res.status(400).json({ ok: false, error: 'Missing x-account-id' });
 
-        try {
-            const { items } = req.body;
-            if (!Array.isArray(items) || items.length === 0) {
-                return res.status(400).json({ ok: false, error: '缺少出售物品列表' });
-            }
-            const data = await ctx.provider.sellItems(id, items);
-            res.json({ ok: true, data });
-        } catch (e: any) {
-            handleApiError(res, e);
+        const { items } = req.body;
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ ok: false, error: '缺少出售物品列表' });
         }
+        await runBagMutation(
+            res,
+            'sell',
+            id,
+            { itemCount: items.length, totalCount: items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item?.count) || 0), 0) },
+            () => ctx.provider.sellItems(id, items),
+        );
     });
 
     app.get('/api/illustrated', async (req: Request, res: Response) => {

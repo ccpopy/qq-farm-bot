@@ -2,19 +2,22 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api from '@/api'
 import { useAccountStore } from '@/stores/account'
+import { bagMutationFailure, normalizeBagMutationResponse } from '@/utils/bag-mutation.js'
 
 export const useBagStore = defineStore('bag', () => {
   const allItems = ref<any[]>([])
   const originalItems = ref<any[]>([])
   const systemItems = ref<any[]>([])
   const loading = ref(false)
-  let pendingFetch: Promise<void> | null = null
+  let pendingFetch: Promise<boolean> | null = null
   let pendingAccountId = ''
+  let loadedAccountId = ''
 
   function clearBag() {
     allItems.value = []
     originalItems.value = []
     systemItems.value = []
+    loadedAccountId = ''
   }
 
   const items = computed(() => allItems.value)
@@ -26,10 +29,13 @@ export const useBagStore = defineStore('bag', () => {
 
   async function fetchBag(accountId: string) {
     if (!accountId)
-      return
+      return false
     const requestedId = String(accountId)
     if (pendingFetch && pendingAccountId === requestedId)
       return pendingFetch
+
+    if (loadedAccountId && loadedAccountId !== requestedId)
+      clearBag()
 
     loading.value = true
     const request = (async () => {
@@ -40,33 +46,25 @@ export const useBagStore = defineStore('bag', () => {
         const acc = useAccountStore()
         const curId = String((acc.currentAccountId as { value?: string })?.value ?? acc.currentAccountId ?? '')
         if (curId !== requestedId)
-          return
+          return false
         if (res.data.ok && res.data.data) {
           allItems.value = Array.isArray(res.data.data.items) ? res.data.data.items : []
           originalItems.value = Array.isArray(res.data.data.originalItems) ? res.data.data.originalItems : []
           systemItems.value = Array.isArray(res.data.data.systemItems) ? res.data.data.systemItems : []
+          loadedAccountId = requestedId
+          return true
         }
-        else if (res.data && res.data.ok === false && res.data.error) {
-          allItems.value = []
-          originalItems.value = []
-          systemItems.value = []
-        }
+        return false
       }
       catch (e) {
-        const acc = useAccountStore()
-        const curId = String((acc.currentAccountId as { value?: string })?.value ?? acc.currentAccountId ?? '')
-        if (curId === requestedId) {
-          allItems.value = []
-          originalItems.value = []
-          systemItems.value = []
-        }
         console.error(e)
+        return false
       }
     })()
     pendingFetch = request
     pendingAccountId = requestedId
     try {
-      await request
+      return await request
     }
     finally {
       if (pendingFetch === request) {
@@ -78,24 +76,42 @@ export const useBagStore = defineStore('bag', () => {
   }
 
   async function useItem(accountId: string, itemId: number, count = 1, uid = 0) {
-    const res = await api.post('/api/bag/use', { itemId, count, uid }, {
-      headers: { 'x-account-id': accountId },
-    })
-    return res.data
+    try {
+      const res = await api.post('/api/bag/use', { itemId, count, uid }, {
+        headers: { 'x-account-id': accountId },
+        skipErrorToast: true,
+      } as any)
+      return normalizeBagMutationResponse(res.data, '使用失败')
+    }
+    catch (cause: unknown) {
+      return bagMutationFailure(cause, '使用失败')
+    }
   }
 
   async function sellItems(accountId: string, items: Array<{ id: number, count: number, uid?: number }>) {
-    const res = await api.post('/api/bag/sell', { items }, {
-      headers: { 'x-account-id': accountId },
-    })
-    return res.data
+    try {
+      const res = await api.post('/api/bag/sell', { items }, {
+        headers: { 'x-account-id': accountId },
+        skipErrorToast: true,
+      } as any)
+      return normalizeBagMutationResponse(res.data, '出售失败')
+    }
+    catch (cause: unknown) {
+      return bagMutationFailure(cause, '出售失败')
+    }
   }
 
   async function setItemsLocked(accountId: string, itemUids: number[], locked: boolean) {
-    const res = await api.post('/api/bag/lock', { itemUids, locked }, {
-      headers: { 'x-account-id': accountId },
-    })
-    return res.data
+    try {
+      const res = await api.post('/api/bag/lock', { itemUids, locked }, {
+        headers: { 'x-account-id': accountId },
+        skipErrorToast: true,
+      } as any)
+      return normalizeBagMutationResponse(res.data, `${locked ? '锁定' : '解锁'}失败`)
+    }
+    catch (cause: unknown) {
+      return bagMutationFailure(cause, `${locked ? '锁定' : '解锁'}失败`)
+    }
   }
 
   return {

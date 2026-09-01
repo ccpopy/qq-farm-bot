@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { BagMutationResult, BagMutationTarget } from '@/utils/bag-mutation.js'
 import { useIntervalFn } from '@vueuse/core'
 import { NButton } from 'naive-ui/es/button'
 import { NInputNumber } from 'naive-ui/es/input-number'
@@ -10,6 +11,7 @@ import { useBagStore } from '@/stores/bag'
 import { usePetStore } from '@/stores/pet'
 import { useStatusStore } from '@/stores/status'
 import { useToastStore } from '@/stores/toast'
+import { bagMutationTargetsApplied } from '@/utils/bag-mutation.js'
 
 const accountStore = useAccountStore()
 const bagStore = useBagStore()
@@ -318,6 +320,63 @@ async function handleUseClick(item: any) {
   }
 }
 
+function createMutationTargets(itemsToChange: Array<{ id: number, count: number, uid?: number }>): BagMutationTarget[] {
+  const requested = new Map<string, { id: number, uid: number, requestedCount: number }>()
+  for (const item of itemsToChange) {
+    const id = Number(item.id || 0)
+    const uid = Number(item.uid || 0)
+    const count = Math.max(1, Number(item.count || 0))
+    const key = `${id}:${uid}`
+    const current = requested.get(key) || { id, uid, requestedCount: 0 }
+    current.requestedCount += count
+    requested.set(key, current)
+  }
+
+  return Array.from(requested.values()).map(target => ({
+    ...target,
+    beforeCount: originalItems.value.reduce((sum: number, item: any) => {
+      if (Number(item.id || 0) !== target.id)
+        return sum
+      if (target.uid > 0 && Number(item.uid || 0) !== target.uid)
+        return sum
+      return sum + Math.max(0, Number(item.count || 0))
+    }, 0),
+  }))
+}
+
+function mutationTraceSuffix(result: BagMutationResult) {
+  return result.traceId ? `（追踪号 ${result.traceId}）` : ''
+}
+
+async function refreshAfterSuccessfulMutation(actionLabel: string) {
+  if (!await loadBag())
+    toastStore.warning(`${actionLabel}已经成功，但背包刷新失败，请稍后手动刷新确认库存`)
+}
+
+async function handleMutationFailure(
+  result: BagMutationResult,
+  targets: BagMutationTarget[],
+  successMessage: string,
+  failureLabel: string,
+) {
+  const detail = `${result.error || '未知错误'}${mutationTraceSuffix(result)}`
+  if (!result.uncertain) {
+    toastStore.error(`${failureLabel}: ${detail}`)
+    return false
+  }
+
+  // 副作用请求绝不自动重试；仅等待片刻后做一次只读库存核对。
+  await new Promise(resolve => setTimeout(resolve, 350))
+  const refreshed = await loadBag()
+  if (refreshed && bagMutationTargetsApplied(originalItems.value, targets)) {
+    toastStore.warning(`${successMessage}；接口响应异常，但已通过库存变化确认生效`)
+    return true
+  }
+
+  toastStore.warning(`${failureLabel}结果暂无法确认: ${detail}。为避免重复扣除，请先刷新背包核对，不要立即重试`)
+  return false
+}
+
 async function handleConfirm() {
   const { action, item, selectedItems, useCount } = confirmModal.value
   if (!currentAccountId.value)
@@ -335,13 +394,19 @@ async function handleConfirm() {
         return
       }
 
+      const targets = createMutationTargets(sellItems)
       const res = await bagStore.sellItems(currentAccountId.value, sellItems)
       if (res.ok) {
         toastStore.success(`已出售 ${item.name || `物品${item.id}`}`)
-        await loadBag()
+        await refreshAfterSuccessfulMutation('出售')
       }
       else {
-        toastStore.error(`出售失败: ${res.error || '未知错误'}`)
+        await handleMutationFailure(
+          res,
+          targets,
+          `已出售 ${item.name || `物品${item.id}`}`,
+          '出售',
+        )
       }
     }
     else if (action === 'batchSell' && selectedItems) {
@@ -352,8 +417,15 @@ async function handleConfirm() {
         return
       }
 
+      const targets = createMutationTargets(itemsToSell)
       const res = await bagStore.sellItems(currentAccountId.value, itemsToSell)
-      if (res.ok) {
+      const applied = res.ok || await handleMutationFailure(
+        res,
+        targets,
+        `已批量出售 ${selectedItems.length} 种物品`,
+        '批量出售',
+      )
+      if (applied) {
         let totalGold = 0
         let totalGoldBean = 0
         for (const si of selectedItems) {
@@ -371,13 +443,12 @@ async function handleConfirm() {
           }
         }
         batchSellResult.value = { gold: totalGold, goldBean: totalGoldBean }
-        toastStore.success(`已批量出售 ${selectedItems.length} 种物品，获得 ${totalGold} 金币, ${totalGoldBean} 金豆豆`)
+        if (res.ok)
+          toastStore.success(`已批量出售 ${selectedItems.length} 种物品，获得 ${totalGold} 金币, ${totalGoldBean} 金豆豆`)
         selectedForBatch.value.clear()
         batchAction.value = null
-        await loadBag()
-      }
-      else {
-        toastStore.error(`批量出售失败: ${res.error || '未知错误'}`)
+        if (res.ok)
+          await refreshAfterSuccessfulMutation('批量出售')
       }
     }
     else if ((action === 'batchLock' || action === 'batchUnlock') && selectedItems) {
@@ -421,11 +492,18 @@ async function handleConfirm() {
         const res = await bagStore.useItem(currentAccountId.value, Number(item.id), count, Number(item.uid) || 0)
         if (res.ok) {
           toastStore.success(`已使用 ${item.name || `物品${item.id}`} x${count}`)
-          await loadBag()
+          await refreshAfterSuccessfulMutation('使用')
           await refreshPetSnapshotIfLoaded()
         }
         else {
-          toastStore.error(`使用失败: ${res.error || '未知错误'}`)
+          const applied = await handleMutationFailure(
+            res,
+            createMutationTargets([{ id: Number(item.id), count, uid: Number(item.uid) || 0 }]),
+            `已使用 ${item.name || `物品${item.id}`} x${count}`,
+            '使用',
+          )
+          if (applied)
+            await refreshPetSnapshotIfLoaded()
         }
       }
     }
@@ -550,20 +628,29 @@ function handleBatchActionClick() {
 
 async function loadBag() {
   if (!currentAccountId.value)
-    return
+    return false
 
   const acc = currentAccount.value
   if (!acc)
-    return
+    return false
 
-  if (!realtimeConnected.value)
-    await statusStore.fetchStatus(currentAccountId.value)
+  try {
+    if (!realtimeConnected.value)
+      await statusStore.fetchStatus(currentAccountId.value)
 
-  if (acc.running && status.value?.connection?.connected) {
-    await bagStore.fetchBag(currentAccountId.value)
+    if (acc.running && status.value?.connection?.connected) {
+      const refreshed = await bagStore.fetchBag(currentAccountId.value)
+      if (refreshed)
+        imageErrors.value = {}
+      return refreshed
+    }
+
+    return false
   }
-
-  imageErrors.value = {}
+  catch (cause) {
+    console.error(cause)
+    return false
+  }
 }
 
 async function refreshPetSnapshotIfLoaded() {

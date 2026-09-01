@@ -42,6 +42,8 @@ Thumbs.db
 **/tests/
 !core/tests/
 !core/tests/*.test.js
+!web/tests/
+!web/tests/*.test.mjs
 coverage/
 .nyc_output/
 

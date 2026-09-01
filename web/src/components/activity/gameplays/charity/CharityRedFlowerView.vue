@@ -898,9 +898,13 @@ button:disabled {
 }
 
 .confirm-actions {
+  grid-column: 1 / -1;
+  grid-row: 2;
   width: 100%;
+  max-width: 196px;
   flex-direction: row;
   gap: 6px;
+  justify-self: center;
 }
 
 .confirm-actions button {
