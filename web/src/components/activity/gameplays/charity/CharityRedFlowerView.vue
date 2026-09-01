@@ -825,9 +825,16 @@ button:disabled {
 }
 
 .command-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  grid-template-areas:
+    'icon copy'
+    '. action';
   min-width: 0;
   align-items: flex-start;
-  gap: 11px;
+  column-gap: 11px;
+  row-gap: 14px;
   padding: 16px;
 }
 
@@ -836,6 +843,7 @@ button:disabled {
 }
 
 .command-icon {
+  grid-area: icon;
   flex: none;
   margin-top: 3px;
   color: #247455;
@@ -855,13 +863,15 @@ button:disabled {
 }
 
 .command-copy {
+  grid-area: copy;
   flex: 1;
   gap: 3px;
 }
 
 .command-copy strong,
 .command-copy span {
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .command-copy > span {
@@ -871,12 +881,33 @@ button:disabled {
 
 .command-item > button,
 .confirm-actions {
+  grid-area: action;
+  max-width: 100%;
   align-self: center;
+  justify-self: start;
+}
+
+.command-item > button,
+.confirm-actions button,
+.command-copy .inline-reward {
+  white-space: nowrap;
+}
+
+.command-copy .inline-reward {
+  overflow: hidden;
 }
 
 .confirm-actions {
-  flex-direction: column;
+  width: 100%;
+  flex-direction: row;
   gap: 6px;
+}
+
+.confirm-actions button {
+  min-width: 0;
+  flex: 1;
+  padding-right: 8px;
+  padding-left: 8px;
 }
 
 .confirm-actions .secondary {
@@ -905,7 +936,7 @@ button:disabled {
 .milestone {
   position: relative;
   min-width: 0;
-  padding: 34px 12px 12px;
+  padding: 40px 12px 12px;
   text-align: center;
 }
 
@@ -934,23 +965,31 @@ button:disabled {
 .milestone-dot {
   position: absolute;
   z-index: 1;
-  top: 7px;
+  top: 2px;
   left: 50%;
-  width: 18px;
-  height: 18px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
-  border: 2px solid #cbd5ce;
-  border-radius: 50%;
   color: #829087;
   background: #fff;
+  box-shadow: 0 0 0 4px #fff;
   transform: translateX(-50%);
 }
 
+.milestone-dot > span {
+  font-size: 20px;
+  line-height: 1;
+}
+
 .milestone.reached .milestone-dot {
-  border-color: #48a879;
+  border-radius: 50%;
   color: #fff;
   background: #48a879;
+}
+
+.milestone.reached .milestone-dot > span {
+  font-size: 13px;
 }
 
 .milestone-reward {
@@ -974,7 +1013,6 @@ button:disabled {
 }
 
 .milestone.claimed .milestone-dot {
-  border-color: #7e8c84;
   background: #7e8c84;
 }
 
@@ -1103,10 +1141,6 @@ button:disabled {
     border-left: 0;
   }
 
-  .confirm-actions {
-    flex-direction: row;
-  }
-
   .milestone-track {
     overflow-x: auto;
     grid-template-columns: repeat(5, minmax(150px, 1fr));
@@ -1135,7 +1169,6 @@ button:disabled {
   .settlement-band,
   .global-detail {
     align-items: stretch;
-    flex-direction: column;
   }
 
   .command-item > button,
