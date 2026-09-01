@@ -354,6 +354,7 @@ function cleanupTaskSystem(): void {
 }
 
 module.exports = {
+    getTaskInfo,
     checkAndClaimTasks,
     initTaskSystem,
     cleanupTaskSystem,

@@ -3,7 +3,7 @@ export {};
  * 每日分享礼包
  */
 
-const { sendMsgAsync, sendMsgNoReply } = require('../utils/network');
+const { sendMsgAsync } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { log, getSystemDateKey } = require('../utils/utils');
 
@@ -56,12 +56,13 @@ async function claimShareReward(): Promise<any> {
     return types.ClaimShareRewardReply.decode(replyBody);
 }
 
-async function reportActivityShare(source: number, scene: number): Promise<void> {
+async function reportActivityShare(source: number, scene: number): Promise<any> {
     const body: Uint8Array = types.ReportShareRequest.encode(types.ReportShareRequest.create({
         field_1: source,
         field_4: scene,
     })).finish();
-    await sendMsgNoReply('gamepb.sharepb.ShareService', 'ReportShare', body);
+    const { body: replyBody } = await sendMsgAsync('gamepb.sharepb.ShareService', 'ReportShare', body);
+    return types.ReportShareReply.decode(replyBody);
 }
 
 async function checkDailyShareStatus(force: boolean = false): Promise<boolean> {
@@ -122,6 +123,7 @@ async function checkDailyShareStatus(force: boolean = false): Promise<boolean> {
 }
 
 module.exports = {
+    checkCanShare,
     checkDailyShareStatus,
     reportActivityShare,
     getInviteInfo,

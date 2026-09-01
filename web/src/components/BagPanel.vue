@@ -422,6 +422,7 @@ async function handleConfirm() {
         if (res.ok) {
           toastStore.success(`已使用 ${item.name || `物品${item.id}`} x${count}`)
           await loadBag()
+          await refreshPetSnapshotIfLoaded()
         }
         else {
           toastStore.error(`使用失败: ${res.error || '未知错误'}`)
@@ -563,6 +564,14 @@ async function loadBag() {
   }
 
   imageErrors.value = {}
+}
+
+async function refreshPetSnapshotIfLoaded() {
+  const accountId = String(currentAccountId.value || '')
+  if (!accountId || !petSnapshot.value || String(petStore.accountId || '') !== accountId)
+    return
+  // 礼包可能开出狗粮；背包到账后同步宠物页依赖的狗粮库存快照。
+  await petStore.fetchPetInfo(accountId)
 }
 
 onMounted(() => {

@@ -83,10 +83,9 @@ async function checkAndClaimEmails(force: boolean = false): Promise<{ claimed: n
     lastCheckAt = now;
 
     try {
-        const [box1, box2]: any[] = await Promise.all([
-            getEmailList(1).catch(() => ({ emails: [] })),
-            getEmailList(2).catch(() => ({ emails: [] })),
-        ]);
+        // 小游戏网关在同一账号上必须串行请求，避免两个邮箱列表请求并发造成回包停滞。
+        const box1: any = await getEmailList(1).catch(() => ({ emails: [] }));
+        const box2: any = await getEmailList(2).catch(() => ({ emails: [] }));
 
         const fromBox1: any[] = (box1.emails || []).map((x: any) => ({ ...x, __boxType: 1 }));
         const fromBox2: any[] = (box2.emails || []).map((x: any) => ({ ...x, __boxType: 2 }));

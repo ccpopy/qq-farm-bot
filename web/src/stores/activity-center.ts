@@ -223,8 +223,10 @@ export interface ActivityActionsDto {
   qixiBridge: ActivityActionDto
   qixiGift: ActivityActionDto
   qixiDew: ActivityActionDto
+  charityShare: ActivityActionDto
   charityClaimSeeds: ActivityActionDto
   charityDonateLove: ActivityActionDto
+  charityClaimProgressReward: ActivityActionDto
   charityClaimDailyGift: ActivityActionDto
   weatherResearch?: ActivityActionDto
 }
@@ -447,7 +449,51 @@ export interface CharityProgressRewardDto {
   reward: ActivityItemDto
   statusCode: string
   reached: boolean
-  claimSupported: false
+  claimed: boolean
+  claimable: boolean
+  claimSupported: boolean
+}
+
+export interface CharitySeedTaskDto {
+  id: string
+  description: string
+  progress: string
+  target: string
+  completed: boolean
+  claimed: boolean
+  unlocked: boolean
+  claimable: boolean
+  group: string
+  conditionType: string
+  shareMultiple: string
+  seedReward: ActivityItemDto
+}
+
+export interface CharityTaskSummaryDto {
+  tasks: CharitySeedTaskDto[]
+  totalCount: number
+  completedCount: number
+  claimedCount: number
+  claimableCount: number
+}
+
+export interface CharityLandDetailDto {
+  landId: string
+  status: 'growing' | 'harvestable' | 'dead'
+  phaseCode: string
+  season: string
+  matureAt: number | null
+  matureInSec: number
+  leftOrganicFertilizerTimes: string
+}
+
+export interface CharityLandSummaryDto {
+  total: number
+  growing: number
+  harvestable: number
+  dead: number
+  landIds: string[]
+  details: CharityLandDetailDto[]
 }
 
 export interface CharityRedFlowerActivityDto {
@@ -464,7 +510,12 @@ export interface CharityRedFlowerActivityDto {
   loveBalance: string
   donatedLove: string
   flowStatus: string
+  agreementStatus: string
   seedReward: { statusCode: string, claimable: boolean, claimed: boolean, reward: ActivityItemDto }
+  taskSummary: CharityTaskSummaryDto | null
+  inventory: { seed: ActivityItemDto, love: ActivityItemDto } | null
+  lands: CharityLandSummaryDto | null
+  supplementalErrors: Record<string, string>
   dailyGift: {
     statusCode: string
     claimed: boolean
@@ -475,8 +526,10 @@ export interface CharityRedFlowerActivityDto {
   globalProgress: { donated: string, target: string, reached: boolean, rewardTarget: string, reward: ActivityItemDto }
   settlement: { requiredLove: string, eligible: boolean, reward: ActivityItemDto }
   actions: {
+    share: ActivityActionDto
     claimSeeds: ActivityActionDto
     donateLove: ActivityActionDto
+    claimProgressReward: ActivityActionDto
     claimDailyGift: ActivityActionDto
   }
 }
@@ -495,7 +548,7 @@ export interface ActivityCenterSnapshotDto {
   actions: ActivityActionsDto
 }
 
-export type ActivityMutationKey = 'claimPass' | 'lightConstellation' | 'claimSolar' | 'exchange' | 'claimQixiBridge' | 'giftQixiSachet' | 'claimQingMeiSeed' | 'startQingMeiBrew' | 'continueQingMeiBrew' | 'settleQingMeiBrew' | 'claimCharitySeeds' | 'donateCharityLove' | 'claimCharityDailyGift' | 'lightWeatherResearch' | 'buyWeatherBottle' | 'scanWeatherFriends' | 'collectWeatherBottle' | 'summonWeatherRain'
+export type ActivityMutationKey = 'claimPass' | 'lightConstellation' | 'claimSolar' | 'exchange' | 'claimQixiBridge' | 'giftQixiSachet' | 'claimQingMeiSeed' | 'startQingMeiBrew' | 'continueQingMeiBrew' | 'settleQingMeiBrew' | 'shareCharity' | 'claimCharitySeeds' | 'donateCharityLove' | 'claimCharityProgressReward' | 'claimCharityDailyGift' | 'lightWeatherResearch' | 'buyWeatherBottle' | 'scanWeatherFriends' | 'collectWeatherBottle' | 'summonWeatherRain'
 
 function isRecord(value: unknown): value is ActivityRecord {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -1087,6 +1140,54 @@ function normalizeCharityRedFlower(value: unknown): CharityRedFlowerActivityDto 
   const globalProgress = record(first(raw.globalProgress, raw.global_progress))
   const settlement = record(raw.settlement)
   const actions = record(raw.actions)
+  const taskSummary = record(first(raw.taskSummary, raw.task_summary))
+  const inventory = record(raw.inventory)
+  const lands = record(raw.lands)
+  const supplementalErrors = record(first(raw.supplementalErrors, raw.supplemental_errors))
+  const normalizedTaskSummary: CharityTaskSummaryDto | null = Object.keys(taskSummary).length > 0
+    ? {
+        tasks: records(taskSummary.tasks).map(task => ({
+          id: text(task.id),
+          description: text(task.description, task.desc),
+          progress: text(task.progress),
+          target: text(task.target, task.totalProgress, task.total_progress),
+          completed: bool(task.completed),
+          claimed: bool(task.claimed),
+          unlocked: bool(task.unlocked),
+          claimable: bool(task.claimable),
+          group: text(task.group),
+          conditionType: text(task.conditionType, task.condition_type),
+          shareMultiple: text(task.shareMultiple, task.share_multiple),
+          seedReward: normalizeItem(first(task.seedReward, task.seed_reward)),
+        })),
+        totalCount: finiteNumber(first(taskSummary.totalCount, taskSummary.total_count)) || 0,
+        completedCount: finiteNumber(first(taskSummary.completedCount, taskSummary.completed_count)) || 0,
+        claimedCount: finiteNumber(first(taskSummary.claimedCount, taskSummary.claimed_count)) || 0,
+        claimableCount: finiteNumber(first(taskSummary.claimableCount, taskSummary.claimable_count)) || 0,
+      }
+    : null
+  const normalizedLands: CharityLandSummaryDto | null = Object.keys(lands).length > 0
+    ? {
+        total: finiteNumber(lands.total) || 0,
+        growing: finiteNumber(lands.growing) || 0,
+        harvestable: finiteNumber(lands.harvestable) || 0,
+        dead: finiteNumber(lands.dead) || 0,
+        landIds: Array.isArray(lands.landIds) ? lands.landIds.map(value => text(value)).filter(Boolean) : [],
+        details: records(lands.details).map((land) => {
+          const rawStatus = text(land.status)
+          const status: CharityLandDetailDto['status'] = rawStatus === 'harvestable' || rawStatus === 'dead' ? rawStatus : 'growing'
+          return {
+            landId: text(land.landId, land.land_id),
+            status,
+            phaseCode: text(land.phaseCode, land.phase_code),
+            season: text(land.season),
+            matureAt: toMilliseconds(first(land.matureAt, land.mature_at)),
+            matureInSec: finiteNumber(first(land.matureInSec, land.mature_in_sec)) || 0,
+            leftOrganicFertilizerTimes: text(land.leftOrganicFertilizerTimes, land.left_organic_fertilizer_times),
+          }
+        }),
+      }
+    : null
   return {
     groupId: text(raw.groupId, raw.group_id),
     activityId: text(raw.activityId, raw.activity_id),
@@ -1101,12 +1202,19 @@ function normalizeCharityRedFlower(value: unknown): CharityRedFlowerActivityDto 
     loveBalance: text(raw.loveBalance, raw.love_balance),
     donatedLove: text(raw.donatedLove, raw.donated_love),
     flowStatus: text(raw.flowStatus, raw.flow_status),
+    agreementStatus: text(raw.agreementStatus, raw.agreement_status),
     seedReward: {
       statusCode: text(seedReward.statusCode, seedReward.status_code),
       claimable: bool(seedReward.claimable),
       claimed: bool(seedReward.claimed),
       reward: normalizeItem(seedReward.reward),
     },
+    taskSummary: normalizedTaskSummary,
+    inventory: Object.keys(inventory).length > 0
+      ? { seed: normalizeItem(inventory.seed), love: normalizeItem(inventory.love) }
+      : null,
+    lands: normalizedLands,
+    supplementalErrors: Object.fromEntries(Object.entries(supplementalErrors).map(([key, value]) => [key, text(value)])),
     dailyGift: {
       statusCode: text(dailyGift.statusCode, dailyGift.status_code),
       claimed: bool(dailyGift.claimed),
@@ -1120,7 +1228,9 @@ function normalizeCharityRedFlower(value: unknown): CharityRedFlowerActivityDto 
       reward: normalizeItem(entry.reward),
       statusCode: text(entry.statusCode, entry.status_code, entry.status),
       reached: bool(entry.reached),
-      claimSupported: false,
+      claimed: bool(entry.claimed),
+      claimable: bool(entry.claimable),
+      claimSupported: bool(entry.claimSupported, entry.claim_supported),
     })),
     globalProgress: {
       donated: text(globalProgress.donated),
@@ -1135,8 +1245,10 @@ function normalizeCharityRedFlower(value: unknown): CharityRedFlowerActivityDto 
       reward: normalizeItem(settlement.reward),
     },
     actions: {
+      share: normalizeAction(actions, {}, ['share']),
       claimSeeds: normalizeAction(actions, {}, ['claimSeeds', 'claim_seeds']),
       donateLove: normalizeAction(actions, {}, ['donateLove', 'donate_love']),
+      claimProgressReward: normalizeAction(actions, {}, ['claimProgressReward', 'claim_progress_reward']),
       claimDailyGift: normalizeAction(actions, {}, ['claimDailyGift', 'claim_daily_gift']),
     },
   }
@@ -1533,8 +1645,10 @@ export function normalizeActivitySnapshot(value: unknown): ActivityCenterSnapsho
       qixiBridge: normalizeAction(actionsRaw, capabilitiesRaw, ['qixiBridge', 'qixi_bridge']),
       qixiGift: normalizeAction(actionsRaw, capabilitiesRaw, ['qixiGift', 'qixi_gift']),
       qixiDew: normalizeAction(actionsRaw, capabilitiesRaw, ['qixiDew', 'qixi_dew']),
+      charityShare: normalizeAction(actionsRaw, capabilitiesRaw, ['charityShare', 'charity_share']),
       charityClaimSeeds: normalizeAction(actionsRaw, capabilitiesRaw, ['charityClaimSeeds', 'charity_claim_seeds']),
       charityDonateLove: normalizeAction(actionsRaw, capabilitiesRaw, ['charityDonateLove', 'charity_donate_love']),
+      charityClaimProgressReward: normalizeAction(actionsRaw, capabilitiesRaw, ['charityClaimProgressReward', 'charity_claim_progress_reward']),
       charityClaimDailyGift: normalizeAction(actionsRaw, capabilitiesRaw, ['charityClaimDailyGift', 'charity_claim_daily_gift']),
     },
   }
@@ -1571,6 +1685,8 @@ const activityErrorMessages: Record<string, string> = {
   CHARITY_RED_FLOWER_RESPONSE_INVALID: '公益小红花活动数据已经变化，请刷新页面后重试',
   CHARITY_SEEDS_UNAVAILABLE: '当前没有可领取的小红花种子',
   INSUFFICIENT_CHARITY_LOVE: '当前没有可捐赠的爱心',
+  INVALID_CHARITY_PROGRESS_TARGET: '爱心进度档位无效，请刷新活动后重试',
+  CHARITY_PROGRESS_REWARD_UNAVAILABLE: '该爱心进度奖励尚未达到条件或已经领取',
   CHARITY_DAILY_GIFT_UNAVAILABLE: '今日公益礼包已经领取或暂不可领取',
   INVALID_WEATHER_BOTTLE_COUNT: '天气瓶购买数量必须是正整数',
   INVALID_WEATHER_NODE: '研究节点信息无效，请刷新活动后重试',
@@ -1669,8 +1785,10 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     startQingMeiBrew: false,
     continueQingMeiBrew: false,
     settleQingMeiBrew: false,
+    shareCharity: false,
     claimCharitySeeds: false,
     donateCharityLove: false,
+    claimCharityProgressReward: false,
     claimCharityDailyGift: false,
     lightWeatherResearch: false,
     buyWeatherBottle: false,
@@ -1721,7 +1839,7 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     loadedAccountId.value = ''
     serverClockOffset.value = 0
     clearWeatherFriends()
-    pendingActions.value = { claimPass: false, lightConstellation: false, claimSolar: false, exchange: false, claimQixiBridge: false, giftQixiSachet: false, claimQingMeiSeed: false, startQingMeiBrew: false, continueQingMeiBrew: false, settleQingMeiBrew: false, claimCharitySeeds: false, donateCharityLove: false, claimCharityDailyGift: false, lightWeatherResearch: false, buyWeatherBottle: false, scanWeatherFriends: false, collectWeatherBottle: false, summonWeatherRain: false }
+    pendingActions.value = { claimPass: false, lightConstellation: false, claimSolar: false, exchange: false, claimQixiBridge: false, giftQixiSachet: false, claimQingMeiSeed: false, startQingMeiBrew: false, continueQingMeiBrew: false, settleQingMeiBrew: false, shareCharity: false, claimCharitySeeds: false, donateCharityLove: false, claimCharityProgressReward: false, claimCharityDailyGift: false, lightWeatherResearch: false, buyWeatherBottle: false, scanWeatherFriends: false, collectWeatherBottle: false, summonWeatherRain: false }
   }
 
   function clearActionMessages() {
@@ -1967,8 +2085,16 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     return mutate('claimCharitySeeds', '/charity-red-flower/seeds/claim', accountId)
   }
 
+  function shareCharityRedFlower(accountId: string) {
+    return mutate('shareCharity', '/charity-red-flower/share', accountId)
+  }
+
   function donateCharityRedFlowerLove(accountId: string) {
     return mutate('donateCharityLove', '/charity-red-flower/love/donate', accountId)
+  }
+
+  function claimCharityRedFlowerProgressReward(accountId: string, target: string) {
+    return mutate('claimCharityProgressReward', `/charity-red-flower/progress/${encodeURIComponent(target)}/claim`, accountId)
   }
 
   function claimCharityRedFlowerDailyGift(accountId: string) {
@@ -2124,8 +2250,10 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     startQingMeiBrew,
     continueQingMeiBrew,
     settleQingMeiBrew,
+    shareCharityRedFlower,
     claimCharityRedFlowerSeeds,
     donateCharityRedFlowerLove,
+    claimCharityRedFlowerProgressReward,
     claimCharityRedFlowerDailyGift,
     lightWeatherResearch,
     buyWeatherBottle,

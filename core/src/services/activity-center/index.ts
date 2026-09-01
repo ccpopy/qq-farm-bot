@@ -47,6 +47,8 @@ module.exports = {
     claimQixiBridgeRewards: qixi.claimQixiBridgeRewards,
     giftQixiSachet: qixi.giftQixiSachet,
     claimCharityRedFlowerSeeds: charity.claimCharityRedFlowerSeeds,
+    shareCharityRedFlower: charity.shareCharityRedFlower,
     donateCharityRedFlowerLove: charity.donateCharityRedFlowerLove,
+    claimCharityRedFlowerProgressReward: charity.claimCharityRedFlowerProgressReward,
     claimCharityRedFlowerDailyGift: charity.claimCharityRedFlowerDailyGift,
 };

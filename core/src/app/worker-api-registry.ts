@@ -117,8 +117,10 @@ function createWorkerApiRegistry(context: WorkerApiContext): Map<string, WorkerA
     register('getCurrentSolarTerms', () => activity.getCurrentSolarTerms());
     register('getCurrentQixiActivity', () => activity.getCurrentQixiActivity());
     register('getCurrentCharityRedFlowerActivity', () => activity.getCurrentCharityRedFlowerActivity());
+    register('shareCharityRedFlower', () => activity.shareCharityRedFlower());
     register('claimCharityRedFlowerSeeds', () => activity.claimCharityRedFlowerSeeds());
     register('donateCharityRedFlowerLove', () => activity.donateCharityRedFlowerLove());
+    register('claimCharityRedFlowerProgressReward', ([target]) => activity.claimCharityRedFlowerProgressReward(target));
     register('claimCharityRedFlowerDailyGift', () => activity.claimCharityRedFlowerDailyGift());
     register('getCurrentWeatherActivity', () => activity.getCurrentWeatherActivity());
     register('buyWeatherBottle', ([count]) => activity.buyWeatherBottle(count));

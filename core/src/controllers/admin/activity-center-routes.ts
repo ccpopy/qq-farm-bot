@@ -31,6 +31,8 @@ const ACTIVITY_ERROR_MESSAGES: Record<string, string> = {
     CHARITY_RED_FLOWER_RESPONSE_INVALID: '公益小红花活动数据已经变化，请刷新页面后重试',
     CHARITY_SEEDS_UNAVAILABLE: '当前没有可领取的小红花种子',
     INSUFFICIENT_CHARITY_LOVE: '当前没有可捐赠的爱心',
+    INVALID_CHARITY_PROGRESS_TARGET: '爱心进度档位无效，请刷新活动后重试',
+    CHARITY_PROGRESS_REWARD_UNAVAILABLE: '该爱心进度奖励尚未达到条件或已经领取',
     CHARITY_DAILY_GIFT_UNAVAILABLE: '今日公益礼包已经领取或暂不可领取',
     INVALID_WEATHER_BOTTLE_COUNT: '天气瓶购买数量必须是正十进制整数',
     INVALID_WEATHER_NODE: '研究节点信息无效，请刷新活动后重试',
@@ -199,9 +201,20 @@ function mountActivityCenterRoutes(app: Application, ctx: AdminContext): void {
     app.post('/api/activity-center/charity-red-flower/seeds/claim', withAccount((accountId: string) => (
         ctx.provider.claimCharityRedFlowerSeeds(accountId)
     )));
+    app.post('/api/activity-center/charity-red-flower/share', withAccount((accountId: string) => (
+        ctx.provider.shareCharityRedFlower(accountId)
+    )));
     app.post('/api/activity-center/charity-red-flower/love/donate', withAccount((accountId: string) => (
         ctx.provider.donateCharityRedFlowerLove(accountId)
     )));
+    app.post('/api/activity-center/charity-red-flower/progress/:target/claim', withAccount((accountId: string, req: Request, res: Response) => {
+        const target = String(req.params.target || '');
+        if (!/^[1-9]\d*$/.test(target)) {
+            res.status(400).json({ ok: false, error: 'target 必须是正十进制整数' });
+            return Promise.resolve(undefined);
+        }
+        return ctx.provider.claimCharityRedFlowerProgressReward(accountId, target);
+    }));
     app.post('/api/activity-center/charity-red-flower/daily-gift/claim', withAccount((accountId: string) => (
         ctx.provider.claimCharityRedFlowerDailyGift(accountId)
     )));
