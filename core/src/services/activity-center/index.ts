@@ -22,6 +22,7 @@ module.exports = {
     getCurrentSolarTerms: snapshot.getCurrentSolarTerms,
     getCurrentQixiActivity: qixi.getCurrentQixiActivity,
     getCurrentCharityRedFlowerActivity: charity.getCurrentCharityRedFlowerActivity,
+    acceptCharityRedFlowerAgreement: charity.acceptCharityRedFlowerAgreement,
     getCurrentWeatherActivity: weatherActivityService.getCurrentWeatherActivity,
     getWeatherFriends: weatherActivityService.getWeatherFriends,
     buyWeatherBottle: weatherActivityService.exchangeWeatherCollectorBottle,

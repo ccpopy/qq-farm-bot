@@ -118,6 +118,11 @@ function charityRedFlowerDto(entry: any, serverTime = Math.floor(Date.now() / 10
             reward: itemDto(state?.settlement_reward),
         },
         actions: {
+            acceptAgreement: {
+                enabled: active && agreementStatus !== '1',
+                available: active && agreementStatus !== '1',
+                availabilityKnown: true,
+            },
             share: {
                 enabled: active && agreementStatus === '1',
                 available: active && agreementStatus === '1',

@@ -24,7 +24,7 @@ test('charity red flower requests reproduce the capture-verified selectors', asy
     assert.equal(encode({ operate_type: 36, donate_love: {} }), '0895e38ec6071024ba0800');
     assert.equal(encode({ operate_type: 37, claim_progress_reward: { target: 30 } }), '0895e38ec6071025c20802081e');
     assert.equal(encode({ operate_type: 38, send_public_fund: {} }), '0895e38ec6071026ca0800');
-    assert.equal(encode({ operate_type: 39, query: { accepted: true } }), '0895e38ec6071027d208020801');
+    assert.equal(encode({ operate_type: 39, agreement: { accepted: true } }), '0895e38ec6071027d208020801');
 });
 
 test('charity red flower share reproduces the capture-verified share selector', async () => {
@@ -54,6 +54,10 @@ test('charity red flower reward replies decode the verified result selectors', a
         '0895e38ec6071025ca080a081e1206088df1041001',
         'hex',
     ));
+    const agreementReply = Reply.decode(Buffer.from(
+        '0895e38ec6071027da08020801',
+        'hex',
+    ));
 
     assert.equal(Number(seedReply.charity_seed_result.reward.id), 20883);
     assert.equal(Number(seedReply.charity_seed_result.reward.count), 6);
@@ -65,6 +69,7 @@ test('charity red flower reward replies decode the verified result selectors', a
     assert.equal(Number(progressReply.charity_progress_reward_result.target), 30);
     assert.equal(Number(progressReply.charity_progress_reward_result.reward.id), 80013);
     assert.equal(Number(progressReply.charity_progress_reward_result.reward.count), 1);
+    assert.equal(agreementReply.charity_agreement_result.accepted, true);
 });
 
 test('charity state keeps the capture-observed status codes without guessing new semantics', () => {
@@ -111,6 +116,7 @@ test('charity state keeps the capture-observed status codes without guessing new
     assert.equal(dto.seedReward.claimed, false);
     assert.equal(dto.flowStatus, '2');
     assert.equal(dto.agreementStatus, '0');
+    assert.equal(dto.actions.acceptAgreement.enabled, true);
     assert.equal(dto.actions.share.enabled, false);
     assert.equal(dto.actions.claimDailyGift.enabled, false);
 });
@@ -131,6 +137,7 @@ test('charity public fund becomes available only after enough love was donated',
         },
     };
     const available = charityRedFlowerDto(base, 1788252059);
+    assert.equal(available.actions.acceptAgreement.enabled, false);
     assert.equal(available.actions.share.enabled, true);
     assert.equal(available.actions.claimDailyGift.enabled, true);
 

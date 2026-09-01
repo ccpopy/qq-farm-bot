@@ -251,6 +251,9 @@ function settleQingMeiBrew() {
 function claimCharitySeeds() {
   activityStore.claimCharityRedFlowerSeeds(accountId())
 }
+function acceptCharityAgreement() {
+  activityStore.acceptCharityRedFlowerAgreement(accountId())
+}
 function shareCharity() {
   activityStore.shareCharityRedFlower(accountId())
 }
@@ -560,11 +563,14 @@ onUnmounted(() => {
         <main class="activity-content gameplay-content">
           <CharityRedFlowerView
             :activity="charity"
+            :pending-agreement="pendingActions.acceptCharityAgreement"
             :pending-share="pendingActions.shareCharity"
             :pending-seeds="pendingActions.claimCharitySeeds"
             :pending-donate="pendingActions.donateCharityLove"
             :pending-progress="pendingActions.claimCharityProgressReward"
             :pending-daily-gift="pendingActions.claimCharityDailyGift"
+            :authorization-error="pendingActions.acceptCharityAgreement || charity?.agreementStatus !== '1' ? actionError : ''"
+            @accept-agreement="acceptCharityAgreement"
             @share="shareCharity"
             @claim-seeds="claimCharitySeeds"
             @donate-love="donateCharityLove"

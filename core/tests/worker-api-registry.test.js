@@ -15,6 +15,7 @@ function createRegistry() {
 test('worker API registry preserves the existing IPC method surface', () => {
     const registry = createRegistry();
     const expectedMethods = [
+        'acceptCharityRedFlowerAgreement',
         'advanceWeatherResearch',
         'applyRuntimeConfigSnapshot',
         'buyFertilizer',

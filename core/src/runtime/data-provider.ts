@@ -174,6 +174,7 @@ function createDataProvider(options: DataProviderOptions) {
         getCurrentSolarTerms: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentSolarTerms'),
         getCurrentQixiActivity: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentQixiActivity'),
         getCurrentCharityRedFlowerActivity: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'getCurrentCharityRedFlowerActivity'),
+        acceptCharityRedFlowerAgreement: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'acceptCharityRedFlowerAgreement'),
         shareCharityRedFlower: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'shareCharityRedFlower'),
         claimCharityRedFlowerSeeds: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'claimCharityRedFlowerSeeds'),
         donateCharityRedFlowerLove: (accountRef: string) => callWorkerApi(resolveAccountRefId(accountRef), 'donateCharityRedFlowerLove'),

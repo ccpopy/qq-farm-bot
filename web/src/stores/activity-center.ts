@@ -526,6 +526,7 @@ export interface CharityRedFlowerActivityDto {
   globalProgress: { donated: string, target: string, reached: boolean, rewardTarget: string, reward: ActivityItemDto }
   settlement: { requiredLove: string, eligible: boolean, reward: ActivityItemDto }
   actions: {
+    acceptAgreement: ActivityActionDto
     share: ActivityActionDto
     claimSeeds: ActivityActionDto
     donateLove: ActivityActionDto
@@ -548,7 +549,7 @@ export interface ActivityCenterSnapshotDto {
   actions: ActivityActionsDto
 }
 
-export type ActivityMutationKey = 'claimPass' | 'lightConstellation' | 'claimSolar' | 'exchange' | 'claimQixiBridge' | 'giftQixiSachet' | 'claimQingMeiSeed' | 'startQingMeiBrew' | 'continueQingMeiBrew' | 'settleQingMeiBrew' | 'shareCharity' | 'claimCharitySeeds' | 'donateCharityLove' | 'claimCharityProgressReward' | 'claimCharityDailyGift' | 'lightWeatherResearch' | 'buyWeatherBottle' | 'scanWeatherFriends' | 'collectWeatherBottle' | 'summonWeatherRain'
+export type ActivityMutationKey = 'claimPass' | 'lightConstellation' | 'claimSolar' | 'exchange' | 'claimQixiBridge' | 'giftQixiSachet' | 'claimQingMeiSeed' | 'startQingMeiBrew' | 'continueQingMeiBrew' | 'settleQingMeiBrew' | 'acceptCharityAgreement' | 'shareCharity' | 'claimCharitySeeds' | 'donateCharityLove' | 'claimCharityProgressReward' | 'claimCharityDailyGift' | 'lightWeatherResearch' | 'buyWeatherBottle' | 'scanWeatherFriends' | 'collectWeatherBottle' | 'summonWeatherRain'
 
 function isRecord(value: unknown): value is ActivityRecord {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -1245,6 +1246,7 @@ function normalizeCharityRedFlower(value: unknown): CharityRedFlowerActivityDto 
       reward: normalizeItem(settlement.reward),
     },
     actions: {
+      acceptAgreement: normalizeAction(actions, {}, ['acceptAgreement', 'accept_agreement']),
       share: normalizeAction(actions, {}, ['share']),
       claimSeeds: normalizeAction(actions, {}, ['claimSeeds', 'claim_seeds']),
       donateLove: normalizeAction(actions, {}, ['donateLove', 'donate_love']),
@@ -1683,6 +1685,7 @@ const activityErrorMessages: Record<string, string> = {
   1034092: '今天还没有收获小红花，暂时无法领取公益礼包',
   CHARITY_RED_FLOWER_UNAVAILABLE: '公益小红花活动暂未开放或已经结束',
   CHARITY_RED_FLOWER_RESPONSE_INVALID: '公益小红花活动数据已经变化，请刷新页面后重试',
+  CHARITY_AGREEMENT_REJECTED: '公益平台未确认授权，请重新勾选协议后再试',
   CHARITY_SEEDS_UNAVAILABLE: '当前没有可领取的小红花种子',
   INSUFFICIENT_CHARITY_LOVE: '当前没有可捐赠的爱心',
   INVALID_CHARITY_PROGRESS_TARGET: '爱心进度档位无效，请刷新活动后重试',
@@ -1785,6 +1788,7 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     startQingMeiBrew: false,
     continueQingMeiBrew: false,
     settleQingMeiBrew: false,
+    acceptCharityAgreement: false,
     shareCharity: false,
     claimCharitySeeds: false,
     donateCharityLove: false,
@@ -1839,7 +1843,7 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     loadedAccountId.value = ''
     serverClockOffset.value = 0
     clearWeatherFriends()
-    pendingActions.value = { claimPass: false, lightConstellation: false, claimSolar: false, exchange: false, claimQixiBridge: false, giftQixiSachet: false, claimQingMeiSeed: false, startQingMeiBrew: false, continueQingMeiBrew: false, settleQingMeiBrew: false, shareCharity: false, claimCharitySeeds: false, donateCharityLove: false, claimCharityProgressReward: false, claimCharityDailyGift: false, lightWeatherResearch: false, buyWeatherBottle: false, scanWeatherFriends: false, collectWeatherBottle: false, summonWeatherRain: false }
+    pendingActions.value = { claimPass: false, lightConstellation: false, claimSolar: false, exchange: false, claimQixiBridge: false, giftQixiSachet: false, claimQingMeiSeed: false, startQingMeiBrew: false, continueQingMeiBrew: false, settleQingMeiBrew: false, acceptCharityAgreement: false, shareCharity: false, claimCharitySeeds: false, donateCharityLove: false, claimCharityProgressReward: false, claimCharityDailyGift: false, lightWeatherResearch: false, buyWeatherBottle: false, scanWeatherFriends: false, collectWeatherBottle: false, summonWeatherRain: false }
   }
 
   function clearActionMessages() {
@@ -2085,6 +2089,10 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     return mutate('claimCharitySeeds', '/charity-red-flower/seeds/claim', accountId)
   }
 
+  function acceptCharityRedFlowerAgreement(accountId: string) {
+    return mutate('acceptCharityAgreement', '/charity-red-flower/agreement/accept', accountId)
+  }
+
   function shareCharityRedFlower(accountId: string) {
     return mutate('shareCharity', '/charity-red-flower/share', accountId)
   }
@@ -2250,6 +2258,7 @@ export const useActivityCenterStore = defineStore('activity-center', () => {
     startQingMeiBrew,
     continueQingMeiBrew,
     settleQingMeiBrew,
+    acceptCharityRedFlowerAgreement,
     shareCharityRedFlower,
     claimCharityRedFlowerSeeds,
     donateCharityRedFlowerLove,

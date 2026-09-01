@@ -26,6 +26,7 @@ const CLAIM_CHARITY_SEED_OPERATE_TYPE = 35;
 const DONATE_CHARITY_LOVE_OPERATE_TYPE = 36;
 const CLAIM_CHARITY_PROGRESS_REWARD_OPERATE_TYPE = 37;
 const CLAIM_CHARITY_DAILY_GIFT_OPERATE_TYPE = 38;
+const ACCEPT_CHARITY_AGREEMENT_OPERATE_TYPE = 39;
 const CHARITY_SHARE_SOURCE = 15;
 const CHARITY_SHARE_SCENE = 1501;
 
@@ -217,8 +218,25 @@ async function claimCharityRedFlowerDailyGift() {
     };
 }
 
+async function acceptCharityRedFlowerAgreement() {
+    // 实机确认：关闭授权弹窗不会发请求；勾选并确认后发送操作 39，
+    // selector 138 的 accepted=true，回包 selector 139 同样返回 true。
+    const reply = await operateCharityRedFlower(ACCEPT_CHARITY_AGREEMENT_OPERATE_TYPE, {
+        agreement: { accepted: true },
+    });
+    if (reply?.charity_agreement_result?.accepted !== true) {
+        throw businessError('CHARITY_AGREEMENT_REJECTED', '公益平台没有确认本次授权');
+    }
+    return {
+        accepted: true,
+        message: '公益平台授权已完成，活动状态已刷新',
+        snapshot: await getActivityCenterSnapshot(),
+    };
+}
+
 module.exports = {
     getCurrentCharityRedFlowerActivity,
+    acceptCharityRedFlowerAgreement,
     claimCharityRedFlowerSeeds,
     shareCharityRedFlower,
     donateCharityRedFlowerLove,

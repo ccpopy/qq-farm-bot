@@ -29,6 +29,7 @@ const ACTIVITY_ERROR_MESSAGES: Record<string, string> = {
     QIXI_GIFT_FAILED: '鹊羽香囊赠送失败，请刷新后重试',
     CHARITY_RED_FLOWER_UNAVAILABLE: '公益小红花活动暂未开放或已经结束',
     CHARITY_RED_FLOWER_RESPONSE_INVALID: '公益小红花活动数据已经变化，请刷新页面后重试',
+    CHARITY_AGREEMENT_REJECTED: '公益平台未确认授权，请重新勾选协议后再试',
     CHARITY_SEEDS_UNAVAILABLE: '当前没有可领取的小红花种子',
     INSUFFICIENT_CHARITY_LOVE: '当前没有可捐赠的爱心',
     INVALID_CHARITY_PROGRESS_TARGET: '爱心进度档位无效，请刷新活动后重试',
@@ -200,6 +201,9 @@ function mountActivityCenterRoutes(app: Application, ctx: AdminContext): void {
 
     app.post('/api/activity-center/charity-red-flower/seeds/claim', withAccount((accountId: string) => (
         ctx.provider.claimCharityRedFlowerSeeds(accountId)
+    )));
+    app.post('/api/activity-center/charity-red-flower/agreement/accept', withAccount((accountId: string) => (
+        ctx.provider.acceptCharityRedFlowerAgreement(accountId)
     )));
     app.post('/api/activity-center/charity-red-flower/share', withAccount((accountId: string) => (
         ctx.provider.shareCharityRedFlower(accountId)

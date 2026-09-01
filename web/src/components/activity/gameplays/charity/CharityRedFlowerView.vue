@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import type { CharityRedFlowerActivityDto } from '@/stores/activity-center'
 import { computed, ref, watch } from 'vue'
+import CharityAgreementDialog from './CharityAgreementDialog.vue'
 
 const props = defineProps<{
   activity: CharityRedFlowerActivityDto | null
+  pendingAgreement: boolean
   pendingShare: boolean
   pendingSeeds: boolean
   pendingDonate: boolean
   pendingProgress: boolean
   pendingDailyGift: boolean
+  authorizationError?: string
 }>()
 
 const emit = defineEmits<{
+  acceptAgreement: []
   share: []
   claimSeeds: []
   donateLove: []
@@ -20,6 +24,8 @@ const emit = defineEmits<{
 }>()
 
 const confirmingDonate = ref(false)
+const agreementDialogOpen = ref(false)
+const agreementRequired = computed(() => props.activity?.agreementStatus !== '1')
 
 const globalPercent = computed(() => {
   const donated = Number(props.activity?.globalProgress.donated || 0)
@@ -105,7 +111,34 @@ function confirmDonation() {
   emit('donateLove')
 }
 
+function openAgreement() {
+  agreementDialogOpen.value = true
+}
+
+function handleShare() {
+  if (agreementRequired.value) {
+    openAgreement()
+    return
+  }
+  emit('share')
+}
+
+function acceptAgreement() {
+  emit('acceptAgreement')
+}
+
 watch(() => props.activity?.loveBalance, () => confirmingDonate.value = false)
+watch(
+  () => [props.activity?.activityId, props.activity?.agreementStatus] as const,
+  ([, agreementStatus]) => {
+    if (agreementStatus === '1') {
+      agreementDialogOpen.value = false
+      return
+    }
+    agreementDialogOpen.value = true
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -255,12 +288,12 @@ watch(() => props.activity?.loveBalance, () => confirmingDonate.value = false)
             </div>
             <button
               type="button"
-              :disabled="pendingShare || !activity.actions.share.enabled"
-              @click="emit('share')"
+              :disabled="pendingShare || pendingAgreement || !activity.active || (activity.agreementStatus === '1' && !activity.actions.share.enabled)"
+              @click="handleShare"
             >
-              <span v-if="pendingShare" class="i-carbon-circle-dash animate-spin" />
+              <span v-if="pendingShare || pendingAgreement" class="i-carbon-circle-dash animate-spin" />
               <span v-else class="i-carbon-share" />
-              {{ pendingShare ? '分享中' : activity.agreementStatus !== '1' ? '待授权' : '分享活动' }}
+              {{ pendingAgreement ? '授权中' : pendingShare ? '分享中' : activity.agreementStatus !== '1' ? '完成授权' : '分享活动' }}
             </button>
           </article>
 
@@ -409,7 +442,22 @@ watch(() => props.activity?.loveBalance, () => confirmingDonate.value = false)
     <div v-else class="empty-state">
       <span class="i-carbon-favorite" />
       <strong>当前账号暂未发现公益小红花活动</strong>
+      <p>可能尚未完成腾讯公益平台授权，确认授权后会重新拉取活动状态。</p>
+      <button type="button" :disabled="pendingAgreement" @click="openAgreement">
+        <span v-if="pendingAgreement" class="i-carbon-circle-dash animate-spin" />
+        <span v-else class="i-carbon-user-certification" />
+        {{ pendingAgreement ? '授权并刷新中' : '检查并完成授权' }}
+      </button>
     </div>
+
+    <CharityAgreementDialog
+      :open="agreementDialogOpen && agreementRequired"
+      :pending="pendingAgreement"
+      :status-known="!!activity"
+      :error-message="authorizationError"
+      @accept="acceptAgreement"
+      @close="agreementDialogOpen = false"
+    />
   </div>
 </template>
 
@@ -1000,8 +1048,37 @@ button:disabled {
   color: #718078;
 }
 
-.empty-state span {
+.empty-state > span {
   font-size: 34px;
+}
+
+.empty-state p {
+  max-width: 430px;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.empty-state button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  margin-top: 4px;
+  padding: 0 15px;
+  color: #fff;
+  border: 0;
+  border-radius: 7px;
+  background: #247455;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.empty-state button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 @media (max-width: 960px) {
