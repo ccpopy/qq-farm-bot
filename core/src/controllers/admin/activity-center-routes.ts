@@ -102,6 +102,13 @@ function activityErrorResponse(error: any): { code: string; message: string; sta
             'worker.dispatch',
         );
     }
+    if (/activity\.[A-Za-z0-9_$]+ is not a function/.test(rawMessage)) {
+        return diagnostic(
+            'ACTIVITY_MODULE_VERSION_MISMATCH',
+            '活动服务仍在使用旧构建产物，请重新构建并完整重启服务及账号',
+            'worker.module.resolve',
+        );
+    }
     if (rawMessage.includes("Cannot read properties of undefined (reading 'encode')")) {
         return diagnostic(
             'ACTIVITY_PROTO_NOT_READY',

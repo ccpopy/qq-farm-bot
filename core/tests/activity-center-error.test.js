@@ -11,6 +11,19 @@ test('activity errors identify a stale worker instead of returning a generic ope
     });
 });
 
+test('activity errors identify a stale compiled activity module', () => {
+    const error = new TypeError('activity.getCurrentCharityRedFlowerActivity is not a function');
+    error.activityStage = 'worker.execute';
+    error.activityTraceId = 'activity-legacy-module-1';
+
+    assert.deepEqual(activityErrorResponse(error), {
+        code: 'ACTIVITY_MODULE_VERSION_MISMATCH',
+        message: '活动服务仍在使用旧构建产物，请重新构建并完整重启服务及账号',
+        stage: 'worker.execute',
+        traceId: 'activity-legacy-module-1',
+    });
+});
+
 test('activity errors retain an unknown gateway status and its safe server message', () => {
     const error = new Error('gamepb.activitypb.ActivityService.List 错误: code=1099999 服务暂不可用');
     error.code = 1099999;

@@ -27,7 +27,7 @@ function createWorkerApiRegistry(context: WorkerApiContext): Map<string, WorkerA
     const mall = require('../services/mall');
     const analytics = require('../services/analytics');
     const illustrated = require('../services/illustrated');
-    const activity = require('../services/activity-center');
+    const activity = require('../services/activity-center/index');
     const commerce = require('../services/commerce');
     const pay = require('../services/pay');
 

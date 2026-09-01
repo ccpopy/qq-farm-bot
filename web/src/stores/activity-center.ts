@@ -1739,6 +1739,7 @@ const activityErrorMessages: Record<string, string> = {
   ACTIVITY_REQUEST_INTERRUPTED: '活动请求未能完成，请稍后重试',
   ACTIVITY_DATA_CHANGED: '活动数据已经更新，请刷新页面后再试',
   WORKER_API_VERSION_MISMATCH: '账号进程仍在运行旧版本，请重启该账号或服务后重试',
+  ACTIVITY_MODULE_VERSION_MISMATCH: '活动服务仍在使用旧构建产物，请重新构建并完整重启服务及账号',
   ACTIVITY_PROTO_NOT_READY: '活动协议定义未正确加载，请重新构建并重启账号后重试',
   ACTIVITY_OPERATION_FAILED: '活动操作失败，请刷新页面后重试',
 }
