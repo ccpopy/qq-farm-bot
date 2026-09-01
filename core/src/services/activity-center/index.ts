@@ -10,6 +10,7 @@ const shop = require('./shop');
 const constellation = require('./constellation');
 const qingMei = require('./qingmei');
 const qixi = require('./qixi');
+const charity = require('./charity');
 
 module.exports = {
     buildActivityDirectory: snapshot.buildActivityDirectory,
@@ -20,6 +21,7 @@ module.exports = {
     getCurrentStarSandShop: snapshot.getCurrentStarSandShop,
     getCurrentSolarTerms: snapshot.getCurrentSolarTerms,
     getCurrentQixiActivity: qixi.getCurrentQixiActivity,
+    getCurrentCharityRedFlowerActivity: charity.getCurrentCharityRedFlowerActivity,
     getCurrentWeatherActivity: weatherActivityService.getCurrentWeatherActivity,
     getWeatherFriends: weatherActivityService.getWeatherFriends,
     buyWeatherBottle: weatherActivityService.exchangeWeatherCollectorBottle,
@@ -44,4 +46,7 @@ module.exports = {
     settleQingMeiBrew: qingMei.settleQingMeiBrew,
     claimQixiBridgeRewards: qixi.claimQixiBridgeRewards,
     giftQixiSachet: qixi.giftQixiSachet,
+    claimCharityRedFlowerSeeds: charity.claimCharityRedFlowerSeeds,
+    donateCharityRedFlowerLove: charity.donateCharityRedFlowerLove,
+    claimCharityRedFlowerDailyGift: charity.claimCharityRedFlowerDailyGift,
 };

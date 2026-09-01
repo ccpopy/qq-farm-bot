@@ -13,6 +13,7 @@ const { queryShopFromSeason } = require('./shop');
 const { buildConstellationFromSeason } = require('./constellation');
 const { getCurrentQingMeiActivity } = require('./qingmei');
 const { getCurrentQixiActivity } = require('./qixi');
+const { getCurrentCharityRedFlowerActivity } = require('./charity');
 
 type SettledEntry = PromiseSettledResult<any>;
 
@@ -69,8 +70,8 @@ function buildActions(season: any, solarTerms: any, constellation: any = null, s
     };
 }
 
-function buildActivityDirectory(windows: any[], season: any, shop: any, solarTerms: any, constellation: any, qixi: any = null, weather: any = null, qingMei: any = null) {
-    const gameplayBindings = buildActivityGameplayBindings({ season, shop, solarTerms, constellation, qixi, weather, qingMei });
+function buildActivityDirectory(windows: any[], season: any, shop: any, solarTerms: any, constellation: any, qixi: any = null, weather: any = null, qingMei: any = null, charity: any = null) {
+    const gameplayBindings = buildActivityGameplayBindings({ season, shop, solarTerms, constellation, qixi, weather, qingMei, charity });
     const groups: any[] = [];
     for (const window of windows) {
         const id = String(window?.id || '').trim();
@@ -113,12 +114,14 @@ async function buildActivityCenterSnapshot(shopOverride: any = null) {
     const activityListResult = await settleRequest(getActivityWindows);
     const qixiResult = await settleRequest(getCurrentQixiActivity);
     const qingMeiResult = await settleRequest(getCurrentQingMeiActivity);
+    const charityResult = await settleRequest(getCurrentCharityRedFlowerActivity);
     const weatherResult = await settleRequest(weatherActivityService.getCurrentWeatherActivity);
     const rawSeason = settledValue(seasonResult);
     const season = rawSeason ? normalizeSeason(rawSeason) : null;
     const solarTerms = solarResult.status === 'fulfilled' ? normalizeSolarTerms(solarResult.value) : null;
     const qixi = settledValue(qixiResult);
     const qingMei = settledValue(qingMeiResult);
+    const charity = settledValue(charityResult);
     const weather = settledValue(weatherResult);
 
     let shopResult: SettledEntry;
@@ -136,18 +139,22 @@ async function buildActivityCenterSnapshot(shopOverride: any = null) {
         qixiBridge: qixi?.actions?.bridge || { enabled: false, available: false, availabilityKnown: false },
         qixiGift: qixi?.actions?.gift || { enabled: false, available: false, availabilityKnown: false },
         qixiDew: qixi?.actions?.dew || { enabled: false, available: false, availabilityKnown: false },
+        charityClaimSeeds: charity?.actions?.claimSeeds || { enabled: false, available: false, availabilityKnown: false },
+        charityDonateLove: charity?.actions?.donateLove || { enabled: false, available: false, availabilityKnown: false },
+        charityClaimDailyGift: charity?.actions?.claimDailyGift || { enabled: false, available: false, availabilityKnown: false },
         weatherResearch: weather?.actions?.advanceResearch || weather?.actions?.research || { enabled: false, available: false, availabilityKnown: false },
     };
     const activityWindows = settledValue(activityListResult) || [];
     return {
         serverTime: getServerTimeSec(),
-        activities: buildActivityDirectory(activityWindows, season, shop, solarTerms, constellation, qixi, weather, qingMei),
+        activities: buildActivityDirectory(activityWindows, season, shop, solarTerms, constellation, qixi, weather, qingMei, charity),
         season,
         constellation,
         shop,
         solarTerms,
         qixi,
         qingMei,
+        charity,
         weather,
         capabilities: {
             claimPass: actions.claimPass.supported,
@@ -158,6 +165,10 @@ async function buildActivityCenterSnapshot(shopOverride: any = null) {
             qixiGift: !!qixi,
             qixiDew: !!qixi,
             qingMei: !!qingMei,
+            charity: !!charity,
+            charityClaimSeeds: !!charity,
+            charityDonateLove: !!charity,
+            charityClaimDailyGift: !!charity,
             weatherResearch: !!weather,
         },
         actions,
@@ -167,6 +178,7 @@ async function buildActivityCenterSnapshot(shopOverride: any = null) {
             solarTerms: settledError(solarResult),
             qixi: settledError(qixiResult),
             qingMei: settledError(qingMeiResult),
+            charity: settledError(charityResult),
             weather: settledError(weatherResult),
             activities: settledError(activityListResult),
         },
@@ -191,7 +203,7 @@ async function getActivityDirectorySnapshot() {
     const activityWindows = await getActivityWindows();
     return {
         serverTime: getServerTimeSec(),
-        activities: buildActivityDirectory(activityWindows, null, null, null, null, null, null, null),
+        activities: buildActivityDirectory(activityWindows, null, null, null, null, null, null, null, null),
     };
 }
 

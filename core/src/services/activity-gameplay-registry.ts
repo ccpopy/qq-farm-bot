@@ -9,6 +9,7 @@ interface ActivityGameplayContext {
     constellation?: any;
     qixi?: any;
     qingMei?: any;
+    charity?: any;
     weather?: any;
 }
 
@@ -52,6 +53,10 @@ const dynamicActivityIds: Record<string, (context: ActivityGameplayContext) => u
     'qingmei:qingmei': context => [
         context.qingMei?.dailyActivityId,
         context.qingMei?.activityId,
+    ],
+    'charity:charity': context => [
+        context.charity?.groupId,
+        context.charity?.activityId,
     ],
     'weather:weather': context => [
         context.weather?.groupId,
