@@ -118,10 +118,13 @@ test('charity state keeps the capture-observed status codes without guessing new
     assert.equal(dto.agreementStatus, '0');
     assert.equal(dto.actions.acceptAgreement.enabled, true);
     assert.equal(dto.actions.share.enabled, false);
-    assert.equal(dto.actions.claimDailyGift.enabled, false);
+    assert.equal(dto.actions.claimDailyGift.enabled, true);
+    assert.equal(dto.actions.claimDailyGift.available, false);
+    assert.equal(dto.actions.claimDailyGift.attemptable, true);
+    assert.equal(dto.actions.claimDailyGift.availabilityKnown, false);
 });
 
-test('charity public fund becomes available only after enough love was donated', () => {
+test('charity public fund status resets daily without disabling server-authoritative attempts', () => {
     const { charityRedFlowerDto } = require('../dist/services/activity-center/charity-state');
     const base = {
         activity: {
@@ -140,11 +143,74 @@ test('charity public fund becomes available only after enough love was donated',
     assert.equal(available.actions.acceptAgreement.enabled, false);
     assert.equal(available.actions.share.enabled, true);
     assert.equal(available.actions.claimDailyGift.enabled, true);
+    assert.equal(available.actions.claimDailyGift.available, true);
+    assert.equal(available.actions.claimDailyGift.attemptable, true);
+    assert.equal(available.actions.claimDailyGift.availabilityKnown, false);
 
     base.charity_red_flower.public_fund = { date: 20260901, status: 1, order_id: 'order' };
-    const claimed = charityRedFlowerDto(base, 1788252059);
-    assert.equal(claimed.dailyGift.claimed, true);
-    assert.equal(claimed.actions.claimDailyGift.enabled, false);
+    const sentToday = charityRedFlowerDto(base, 1788252059);
+    assert.equal(sentToday.dailyGift.claimed, true);
+    assert.equal(sentToday.actions.claimDailyGift.enabled, true);
+    assert.equal(sentToday.actions.claimDailyGift.available, false);
+    assert.equal(sentToday.actions.claimDailyGift.attemptable, true);
+
+    const nextDay = charityRedFlowerDto(base, 1788338459);
+    assert.equal(nextDay.dailyGift.claimed, false);
+    assert.equal(nextDay.dailyGift.publicFund.date, '20260901');
+    assert.equal(nextDay.actions.claimDailyGift.enabled, true);
+    assert.equal(nextDay.actions.claimDailyGift.available, true);
+});
+
+test('daily public fund action delegates validation directly to the activity service', async (t) => {
+    const activityList = require('../dist/services/activity-list');
+    const network = require('../dist/utils/network');
+    const proto = require('../dist/utils/proto');
+    const charityModulePath = require.resolve('../dist/services/activity-center/charity');
+    const originals = {
+        getActivityListReply: activityList.getActivityListReply,
+        sendMsgAsync: network.sendMsgAsync,
+    };
+    let stateReads = 0;
+    let operateCalls = 0;
+
+    await proto.loadProto();
+    activityList.getActivityListReply = async () => {
+        stateReads += 1;
+        throw new Error('daily gift operation must not be blocked by cached activity state');
+    };
+    network.sendMsgAsync = async (service, method, body) => {
+        operateCalls += 1;
+        assert.equal(service, 'gamepb.activitypb.ActivityService');
+        assert.equal(method, 'Operate');
+        const request = proto.types.CharityRedFlowerOperateRequest.decode(body);
+        assert.equal(Number(request.operate_type), 38);
+        assert.ok(request.send_public_fund);
+        const reply = proto.types.ActivityOperateReply.create({
+            activity_id: '2026090901',
+            operate_type: 38,
+            charity_public_fund_result: { status: 1 },
+        });
+        return { body: Buffer.from(proto.types.ActivityOperateReply.encode(reply).finish()) };
+    };
+
+    delete require.cache[charityModulePath];
+    const charity = require(charityModulePath);
+    const snapshot = require('../dist/services/activity-center/snapshot');
+    const originalSnapshot = snapshot.getActivityCenterSnapshot;
+    snapshot.getActivityCenterSnapshot = async () => ({ refreshed: true });
+    t.after(() => {
+        Object.assign(activityList, { getActivityListReply: originals.getActivityListReply });
+        Object.assign(network, { sendMsgAsync: originals.sendMsgAsync });
+        Object.assign(snapshot, { getActivityCenterSnapshot: originalSnapshot });
+        delete require.cache[charityModulePath];
+    });
+
+    const result = await charity.claimCharityRedFlowerDailyGift('daily-fund-test');
+
+    assert.equal(stateReads, 0);
+    assert.equal(operateCalls, 1);
+    assert.equal(result.message, '公益金已送出，今日公益礼包领取成功');
+    assert.deepEqual(result.snapshot, { refreshed: true });
 });
 
 test('charity progress reward distinguishes reached, claimable, and claimed states', () => {

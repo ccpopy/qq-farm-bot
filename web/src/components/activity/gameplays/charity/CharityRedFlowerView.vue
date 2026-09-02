@@ -52,7 +52,7 @@ const seedStatus = computed(() => {
 
 const dailyGiftStatus = computed(() => {
   if (props.activity?.dailyGift.claimed)
-    return '公益金已送出，今日礼包已领取'
+    return '今日已送，仍可再次尝试'
   if (props.activity?.settlement.eligible)
     return '已获得公益金资格，可以送出并领取礼包'
   if (Number(props.activity?.loveBalance || 0) > 0)
@@ -370,7 +370,7 @@ watch(
             >
               <span v-if="pendingDailyGift" class="i-carbon-circle-dash animate-spin" />
               <span v-else class="i-carbon-gift" />
-              {{ pendingDailyGift ? '送出中' : activity.dailyGift.claimed ? '已送出' : '送出公益金' }}
+              {{ pendingDailyGift ? '送出中' : activity.dailyGift.claimed ? '今日已送' : '送出公益金' }}
             </button>
           </article>
         </div>

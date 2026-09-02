@@ -6,6 +6,7 @@ export {};
  */
 
 const { normalizeTaskInfo } = require('../task');
+const { getSystemDateKey } = require('../../utils/utils');
 const {
     int64String,
     int64Number,
@@ -51,9 +52,13 @@ function charityRedFlowerDto(entry: any, serverTime = Math.floor(Date.now() / 10
     const seedRewardStatus = int64String(state?.seed_reward_status);
     const agreementStatus = int64String(state?.agreement_status);
     const publicFundStatus = int64String(state?.public_fund?.status);
-    const dailyGiftClaimed = publicFundStatus !== '0'
-        || int64String(state?.public_fund?.date) !== '0'
+    const publicFundDate = int64String(state?.public_fund?.date);
+    const hasPublicFundRecord = publicFundStatus !== '0'
+        || publicFundDate !== '0'
         || !!state?.public_fund?.order_id;
+    const currentDate = getSystemDateKey(serverTime * 1000).replace(/-/g, '');
+    const dailyGiftClaimed = publicFundDate === currentDate;
+    const dailyGiftEligible = compareInt64(donatedLove, state?.settlement_required_love) >= 0;
     const progressRewards = (Array.isArray(state?.progress_rewards) ? state.progress_rewards : []).map((reward: any) => {
         const target = int64String(reward?.target);
         const statusCode = int64String(reward?.status);
@@ -99,8 +104,8 @@ function charityRedFlowerDto(entry: any, serverTime = Math.floor(Date.now() / 10
             statusCode: int64String(state?.daily_reward_status),
             claimed: dailyGiftClaimed,
             reward: itemDto(state?.daily_reward),
-            publicFund: dailyGiftClaimed ? {
-                date: int64String(state?.public_fund?.date),
+            publicFund: hasPublicFundRecord ? {
+                date: publicFundDate,
                 statusCode: publicFundStatus,
             } : null,
         },
@@ -114,7 +119,7 @@ function charityRedFlowerDto(entry: any, serverTime = Math.floor(Date.now() / 10
         },
         settlement: {
             requiredLove: int64String(state?.settlement_required_love),
-            eligible: compareInt64(donatedLove, state?.settlement_required_love) >= 0,
+            eligible: dailyGiftEligible,
             reward: itemDto(state?.settlement_reward),
         },
         actions: {
@@ -147,16 +152,11 @@ function charityRedFlowerDto(entry: any, serverTime = Math.floor(Date.now() / 10
                 availabilityKnown: true,
             },
             claimDailyGift: {
-                enabled: active
-                    && !dailyGiftClaimed
-                    && compareInt64(donatedLove, state?.settlement_required_love) >= 0,
-                available: active
-                    && !dailyGiftClaimed
-                    && compareInt64(donatedLove, state?.settlement_required_love) >= 0,
-                attemptable: active
-                    && !dailyGiftClaimed
-                    && compareInt64(donatedLove, state?.settlement_required_love) >= 0,
-                availabilityKnown: true,
+                // 公益记录只用于展示“今日已送”；是否还能送由活动服务端在操作时判定。
+                enabled: active,
+                available: active && dailyGiftEligible && !dailyGiftClaimed,
+                attemptable: active,
+                availabilityKnown: false,
             },
         },
     };

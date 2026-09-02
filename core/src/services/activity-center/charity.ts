@@ -37,7 +37,7 @@ let nextTraceSequence = 1;
 
 function normalizeTraceId(value: unknown): string {
     const input = String(value || '').trim();
-    if (/^[a-z0-9._-]{1,96}$/i.test(input)) return input;
+    if (/^[\w.-]{1,96}$/.test(input)) return input;
     const sequence = nextTraceSequence++;
     return `charity-${Date.now().toString(36)}-${sequence.toString(36)}`;
 }
@@ -308,13 +308,7 @@ async function claimCharityRedFlowerProgressReward(targetInput: any, traceInput:
 
 async function claimCharityRedFlowerDailyGift(traceInput: unknown = null) {
     const traceId = normalizeTraceId(traceInput);
-    const activity = await getCurrentCharityRedFlowerActivity({ traceId, maxAgeMs: ACTIVITY_LIST_REUSE_MS });
-    if (!activity) throw businessError('CHARITY_RED_FLOWER_UNAVAILABLE', '公益小红花活动暂未开放或已经结束');
-    if (activity.dailyGift.claimed) {
-        throw businessError('CHARITY_DAILY_GIFT_UNAVAILABLE', '今日公益礼包已经领取');
-    }
-    if (!activity.active) throw businessError('CHARITY_RED_FLOWER_UNAVAILABLE', '公益小红花活动暂未开放或已经结束');
-
+    // 不用本地活动快照拦截重复操作；每日状态与重复尝试结果以活动服务端回包为准。
     const reply = await operateCharityRedFlower(CLAIM_CHARITY_DAILY_GIFT_OPERATE_TYPE, { send_public_fund: {} }, traceId);
     const reward = reply?.charity_public_fund_result?.reward;
     const rewards = reward ? [itemDto(reward)] : (Array.isArray(reply?.rewards) ? reply.rewards : []).map(itemDto);
