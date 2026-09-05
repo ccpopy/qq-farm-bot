@@ -5,7 +5,8 @@ const { getUserState, getGatewayLoad, waitForGatewayIdle } = require('../../util
 const { runWithRequestClass } = require('../../utils/request-context');
 const { toNum, log, logWarn, sleep, getSystemDateKey } = require('../../utils/utils');
 const { createScheduler } = require('../scheduler');
-const { getAllFriends, enterFriendFarm, leaveFriendFarm } = require('./api');
+const { getAllFriends } = require('./api');
+const { withFriendFarmVisit } = require('./visit-session');
 const { extractReplyFriends, getInvalidKnownFriendGidSet } = require('./gid-manager');
 const {
     isFriendDogKnownToday,
@@ -113,11 +114,8 @@ async function waitForFriendTaskIdle(): Promise<boolean> {
 type ProbeOutcome = 'ok' | 'failed' | 'yield';
 
 async function probeFriendDog(gid: number, name: string): Promise<ProbeOutcome> {
-    let entered = false;
     try {
-        await enterFriendFarm(gid, 'low');
-        entered = true;
-        return 'ok';
+        return await withFriendFarmVisit(gid, async () => 'ok' as ProbeOutcome, 'low');
     } catch (e: any) {
         if (isGatewayYieldError(e)) return 'yield';
         const handled = visitStrategyRef().handleFriendEnterError(gid, name, e);
@@ -131,10 +129,6 @@ async function probeFriendDog(gid: number, name: string): Promise<ProbeOutcome> 
             });
         }
         return 'failed';
-    } finally {
-        if (entered) {
-            await runWithRequestClass('friend', () => leaveFriendFarm(gid, 'normal'));
-        }
     }
 }
 

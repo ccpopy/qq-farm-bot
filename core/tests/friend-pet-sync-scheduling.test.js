@@ -123,9 +123,13 @@ test('friend pet synchronization keeps list reads outside the account queue and 
     assert.equal(result.outcome, 'synced');
     assert.deepEqual(submissions.map(entry => entry.name), [
         'friend.pet-sync:11',
+        'friend.session:11',
         'friend.pet-sync:12',
+        'friend.session:12',
     ]);
     assert.deepEqual(submissions.map(entry => entry.options.priority), [
+        'maintenance',
+        'maintenance',
         'maintenance',
         'maintenance',
     ]);
@@ -137,7 +141,8 @@ test('friend pet synchronization keeps list reads outside the account queue and 
 
     assert.equal(cachedResult.outcome, 'synced');
     assert.equal(listReads, 1);
-    assert.equal(submissions.at(-1).name, 'friend.pet-sync:13');
+    assert.equal(submissions.at(-2).name, 'friend.pet-sync:13');
+    assert.equal(submissions.at(-1).name, 'friend.session:13');
     assert.deepEqual(visits.slice(-2), ['enter:13', 'leave:13']);
 });
 

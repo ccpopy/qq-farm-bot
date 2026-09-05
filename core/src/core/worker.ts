@@ -351,7 +351,10 @@ function runFriendTick(auto: any): boolean {
     }
 
     const started = friendTickJob.start(
-        (signal: AbortSignal) => runWithRequestClass('friend', () => checkFriends({ signal })),
+        (signal: AbortSignal) => runWithRequestClass('friend', () => checkFriends({
+            signal,
+            nextVisitDeferMs: () => nextBusinessTickDeferMs('friend'),
+        })),
         {
             onError: (e: any) => {
                 log('系统', `好友统一任务执行失败: ${e.message}`, { module: 'system', event: '好友统一任务', result: 'error' });

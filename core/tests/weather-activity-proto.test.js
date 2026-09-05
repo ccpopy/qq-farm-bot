@@ -157,7 +157,7 @@ test('friend weather scan keeps the five-friend batch contract', () => {
     );
 });
 
-test('friend weather scans submit one account task per farm visit', async (t) => {
+test('friend weather scans wrap each visit in a shared account session', async (t) => {
     const runner = require('../dist/app/account-task-runner');
     const friendApi = require('../dist/services/friend/api');
     const network = require('../dist/utils/network');
@@ -207,8 +207,16 @@ test('friend weather scans submit one account task per farm visit', async (t) =>
             options: { priority: 'interactive', dedupeKey: 'weather.friend-inspect:11' },
         },
         {
+            name: 'friend.session:11',
+            options: { priority: 'maintenance' },
+        },
+        {
             name: 'weather.friend-inspect:12',
             options: { priority: 'interactive', dedupeKey: 'weather.friend-inspect:12' },
+        },
+        {
+            name: 'friend.session:12',
+            options: { priority: 'maintenance' },
         },
     ]);
     assert.deepEqual(visits, ['enter:11', 'leave:11', 'enter:12', 'leave:12']);

@@ -18,7 +18,7 @@ const {
     getDisplayLandContext,
     getPlantInteractionEffects,
 } = require('./farm/land-analysis');
-const { enterFriendFarm, leaveFriendFarm } = require('./friend/api');
+const { withFriendFarmVisit } = require('./friend/visit-session');
 const { getBag, getBagItems } = require('./warehouse');
 
 const SPECIAL_INTERACTION_TYPE = 'additemuseitem';
@@ -550,17 +550,14 @@ async function performFriendInteractionItemBatch(friendGidInput: unknown, itemId
 
     const stacks = await resolveUsableStacks(itemId, info, landIds.length);
 
-    const enterReply = await enterFriendFarm(friendGidNumber);
-    let attempts: any[] = [];
-    try {
+    const { enterReply, attempts } = await withFriendFarmVisit(friendGidNumber, async (enterReply: any) => {
         const actualGid = int64String(enterReply?.basic?.gid);
         if (actualGid !== '0' && actualGid !== friendGid) {
             throw businessError('FRIEND_INTERACTION_HOST_MISMATCH', '进入的好友农场与所选 GID 不一致');
         }
-        attempts = await runInteractionBatch(itemId, info, stacks, friendGid, enterReply?.lands || [], landIds);
-    } finally {
-        await leaveFriendFarm(friendGidNumber);
-    }
+        const attempts = await runInteractionBatch(itemId, info, stacks, friendGid, enterReply?.lands || [], landIds);
+        return { enterReply, attempts };
+    });
 
     const succeeded = attempts.filter((attempt: any) => attempt.ok);
     const failed = attempts.filter((attempt: any) => !attempt.ok);
@@ -606,8 +603,7 @@ async function performFriendFarmInteractionItem(friendGidInput: unknown, itemIdI
     const stack = currentStack(stacks);
     if (!stack) throw businessError('FRIEND_INTERACTION_ITEM_UNAVAILABLE', `${info.name || `物品${itemId}`}当前没有可用库存`);
 
-    const enterReply = await enterFriendFarm(friendGidNumber);
-    try {
+    return withFriendFarmVisit(friendGidNumber, async (enterReply: any) => {
         const actualGid = int64String(enterReply?.basic?.gid);
         if (actualGid !== '0' && actualGid !== friendGid) {
             throw businessError('FRIEND_INTERACTION_HOST_MISMATCH', '进入的好友农场与所选 GID 不一致');
@@ -630,9 +626,7 @@ async function performFriendFarmInteractionItem(friendGidInput: unknown, itemIdI
             items: (await getFriendInteractionItems()).items,
             message: `已在好友农场使用 1 个${itemName}`,
         };
-    } finally {
-        await leaveFriendFarm(friendGidNumber);
-    }
+    });
 }
 
 function currentAccountGid(): string {

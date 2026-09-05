@@ -9,7 +9,7 @@ const { getItemById, getItemImageById } = require('../config/gameConfig');
 const { sendMsgAsync, getUserState, networkEvents, GatewayError } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { getServerTimeSec, toNum, sleep } = require('../utils/utils');
-const { enterFriendFarm, leaveFriendFarm } = require('./friend/api');
+const { withFriendFarmVisit } = require('./friend/visit-session');
 const { getFriendsList, getFriendsListCacheOnly } = require('./friend');
 const { buildLandMap, getCurrentPhase, getDisplayLandContext } = require('./farm/land-analysis');
 const { getBag, getBagItems } = require('./warehouse');
@@ -369,13 +369,12 @@ async function inspectFriendFarmWeather(friend: any, force = false): Promise<any
 }
 
 async function performFriendFarmWeatherInspection(gid: string, cached: any): Promise<any> {
-    let entered = false;
     try {
-        const reply = await enterFriendFarm(Number(gid), 'low');
-        entered = true;
-        const inspection = friendInspectionFromEnterReply(gid, reply);
-        friendWeatherCache.set(gid, inspection);
-        return inspection;
+        return await withFriendFarmVisit(Number(gid), async (reply: any) => {
+            const inspection = friendInspectionFromEnterReply(gid, reply);
+            friendWeatherCache.set(gid, inspection);
+            return inspection;
+        }, 'low');
     } catch (error: any) {
         if (cached) return { ...cached, error: String(error?.message || error || '现场天气检查失败') };
         const inspection = {
@@ -388,8 +387,6 @@ async function performFriendFarmWeatherInspection(gid: string, cached: any): Pro
         };
         friendWeatherCache.set(gid, inspection);
         return inspection;
-    } finally {
-        if (entered) await leaveFriendFarm(Number(gid), 'low');
     }
 }
 
@@ -693,12 +690,9 @@ async function useWeatherCollectorBottle(friendGidInput: unknown): Promise<any> 
     const stack = availableStack(bagBefore, COLLECTOR_BOTTLE_ID);
     if (!stack) throw businessError('WEATHER_COLLECTOR_UNAVAILABLE', '背包中没有可用的天气采集瓶');
 
-    let entered = false;
     let reply: any = null;
     let weatherBefore: any = null;
-    try {
-        const enterReply = await enterFriendFarm(Number(friendGid));
-        entered = true;
+    await withFriendFarmVisit(Number(friendGid), async (enterReply: any) => {
         friendWeatherCache.set(friendGid, friendInspectionFromEnterReply(friendGid, enterReply));
         weatherBefore = weatherStatusDto(enterReply?.weather, friendGid);
         if (!weatherBefore.isThunderstorm) {
@@ -726,9 +720,7 @@ async function useWeatherCollectorBottle(friendGidInput: unknown): Promise<any> 
             }
             throw error;
         }
-    } finally {
-        if (entered) await leaveFriendFarm(Number(friendGid));
-    }
+    });
 
     // 采集成功后按官方客户端方式再次进入，记录服务端更新后的现场标记。
     const weatherAfterInspection = await inspectFriendFarmWeather({ gid: friendGid }, true);
@@ -779,11 +771,8 @@ async function useWeatherFrogBottle(friendGidInput: unknown): Promise<any> {
     const stack = availableStack(await getBag(), FROG_MISCHIEF_BOTTLE_ID);
     if (!stack) throw businessError('WEATHER_FROG_UNAVAILABLE', '背包中没有可用的青蛙使坏瓶');
 
-    let entered = false;
     let result: any = null;
-    try {
-        const enterReply = await enterFriendFarm(Number(friendGid));
-        entered = true;
+    await withFriendFarmVisit(Number(friendGid), async (enterReply: any) => {
         friendWeatherCache.set(friendGid, friendInspectionFromEnterReply(friendGid, enterReply));
         const reply = await sendBottleUse(FROG_MISCHIEF_BOTTLE_ID, stack, {
             host_gid: friendGid,
@@ -796,9 +785,7 @@ async function useWeatherFrogBottle(friendGidInput: unknown): Promise<any> {
             ...useReplyDto(reply),
             friend: friendDtoForGid(friendGid, friendWeatherCache.get(friendGid) || null),
         };
-    } finally {
-        if (entered) await leaveFriendFarm(Number(friendGid));
-    }
+    });
     return { ...result, snapshot: await buildWeatherActivitySnapshot() };
 }
 
@@ -810,11 +797,8 @@ async function useWeatherCloudBottle(friendGidInput: unknown, landIdInput: unkno
     const stack = availableStack(await getBag(), CLOUD_MISCHIEF_BOTTLE_ID);
     if (!stack) throw businessError('WEATHER_CLOUD_UNAVAILABLE', '背包中没有可用的乌云使坏瓶');
 
-    let entered = false;
     let result: any = null;
-    try {
-        const enterReply = await enterFriendFarm(Number(friendGid));
-        entered = true;
+    await withFriendFarmVisit(Number(friendGid), async (enterReply: any) => {
         const eligibleLandIds = cloudEligibleLandIds(enterReply?.lands);
         const requestedLandId = landIdInput == null || landIdInput === ''
             ? ''
@@ -844,9 +828,7 @@ async function useWeatherCloudBottle(friendGidInput: unknown, landIdInput: unkno
             ...useReplyDto(reply),
             friend: friendDtoForGid(friendGid, inspection),
         };
-    } finally {
-        if (entered) await leaveFriendFarm(Number(friendGid));
-    }
+    });
     return { ...result, snapshot: await buildWeatherActivitySnapshot() };
 }
 
