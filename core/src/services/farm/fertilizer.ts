@@ -49,6 +49,9 @@ async function runFertilizerByConfig(
 
     const { skipNormal = false } = options;
 
+    if (fertilizerConfig === 'none' || (reason === 'multi_season' && planted.length === 0)) {
+        return { normal: 0, organic: 0 };
+    }
     if (planted.length === 0 && fertilizerConfig !== 'organic' && fertilizerConfig !== 'both' && fertilizerConfig !== 'smart') {
         return { normal: 0, organic: 0 };
     }
@@ -131,9 +134,13 @@ async function runFertilizerByConfig(
         if (latestLands.length > 0) {
             organicTargets = getOrganicFertilizerTargetsFromLands(latestLands);
         }
+        if (reason === 'multi_season') {
+            const plantedSet = new Set(planted);
+            organicTargets = organicTargets.filter(id => plantedSet.has(id));
+        }
         if (landTypeById.size > 0) {
             organicTargets = filterLandIdsByTypes(organicTargets, landTypeById, selectedLandTypes);
-            }
+        }
 
         fertilizedOrganic = await fertilizeOrganicLoop(organicTargets);
         if (fertilizedOrganic > 0) {
@@ -163,6 +170,13 @@ async function runFertilizerByConfig(
             }
         }
 
+        if (reason === 'multi_season') {
+            const plantedSet = new Set(planted);
+            organicTargets = organicTargets.filter(id => plantedSet.has(id));
+        }
+        if (landTypeById.size > 0) {
+            organicTargets = filterLandIdsByTypes(organicTargets, landTypeById, selectedLandTypes);
+        }
         if (organicTargets.length > 0) {
             fertilizedOrganic = await fertilizeOrganicLoop(organicTargets);
             if (fertilizedOrganic > 0) {

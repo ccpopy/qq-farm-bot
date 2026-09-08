@@ -46,9 +46,9 @@ const selectedCategory = ref<CategoryValue>('fruit')
 
 function getItemCategory(item: any): CategoryValue {
   const itemType = Number(item?.itemType || 0)
-  if (itemType === 17)
-    return 'fruit'
   if (itemType === 6)
+    return 'fruit'
+  if (itemType === 17)
     return 'mutant'
   if (itemType === 5)
     return 'seed'
@@ -184,9 +184,14 @@ function canBatchSell(item: any) {
   return canSell(item) && Number(item.count || 0) > 0
 }
 
+function isFertilizer(item: any) {
+  const interactionType = String(item?.interactionType || '').trim().toLowerCase()
+  return interactionType === 'fertilizer' || interactionType === 'fertilizerpro'
+}
+
 function canUse(item: any) {
   const itemType = Number(item?.itemType || 0)
-  return (itemType === 11 || isDogFood(item)) && item?.locked !== true
+  return (itemType === 11 || isDogFood(item) || isFertilizer(item)) && item?.locked !== true
 }
 
 function isLockable(item: any) {

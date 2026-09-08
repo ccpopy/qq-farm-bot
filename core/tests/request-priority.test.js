@@ -56,12 +56,15 @@ test('heartbeat and ACE keep independent slots when business traffic is full', (
 
 test('scheduled business traffic cannot consume the foreground reserve', () => {
     const queue = [queued('farm'), queued('foreground')];
-    const backgroundBusiness = [{ requestClass: 'farm' }, { requestClass: 'friend' }];
+    const backgroundBusiness = [{ requestClass: 'farm' }];
 
     assert.equal(backgroundBusiness.length, MAX_NON_FOREGROUND_BUSINESS_IN_FLIGHT);
     assert.equal(selectDispatchIndex(queue, backgroundBusiness, 1_000_000), 1);
 
-    const full = [...backgroundBusiness, { requestClass: 'foreground' }];
+    const foregroundOnlyQueue = [queued('foreground')];
+    const withOneForeground = [...backgroundBusiness, { requestClass: 'foreground' }];
+    assert.equal(selectDispatchIndex(foregroundOnlyQueue, withOneForeground, 1_000_000), 0);
+    const full = [...withOneForeground, { requestClass: 'foreground' }];
     assert.equal(full.length, MAX_BUSINESS_IN_FLIGHT);
     assert.equal(selectDispatchIndex(queue, full, 1_000_000), -1);
 });
@@ -82,15 +85,20 @@ test('business classes prefer foreground, then farm, then friend with FIFO insid
         [{ requestClass: 'farm' }, { requestClass: 'farm' }],
         1_000_000,
     ), -1);
-    assert.equal(selectDispatchIndex([queued('friend')], [{ requestClass: 'farm' }], 1_000_000), 0);
+    assert.equal(selectDispatchIndex([queued('friend')], [{ requestClass: 'farm' }], 1_000_000), -1);
+    assert.equal(selectDispatchIndex([queued('farm')], [{ requestClass: 'friend' }], 1_000_000), -1);
 });
 
-test('starved business work is promoted without bypassing capacity limits', () => {
+test('starved business work yields to queued foreground and still progresses without it', () => {
     const now = 1_000_000;
     assert.equal(selectDispatchIndex([
         queued('friend', { enqueuedAt: now - CLASS_STARVATION_MS }),
         queued('foreground', { enqueuedAt: now }),
-    ], [], now), 0);
+    ], [], now), 1);
+    assert.equal(selectDispatchIndex([
+        queued('farm', { enqueuedAt: now }),
+        queued('friend', { enqueuedAt: now - CLASS_STARVATION_MS }),
+    ], [], now), 1);
     assert.equal(selectDispatchIndex([
         queued('friend', { enqueuedAt: now - 500 }),
         queued('foreground', { enqueuedAt: now }),

@@ -8,12 +8,12 @@ type CriticalLane = typeof CRITICAL_LANES[number];
 
 const BUSINESS_CLASSES = ['foreground', 'farm', 'friend'] as const;
 const MAX_BUSINESS_IN_FLIGHT = 3;
-const MAX_NON_FOREGROUND_BUSINESS_IN_FLIGHT = 2;
+const MAX_NON_FOREGROUND_BUSINESS_IN_FLIGHT = 1;
 
 const MAX_IN_FLIGHT_BY_CLASS: Readonly<Record<RequestClass, number>> = {
     critical: 2,
     foreground: 3,
-    farm: 2,
+    farm: 1,
     friend: 1,
     background: 1,
 };
@@ -129,6 +129,7 @@ function selectDispatchIndex(
 
     const businessInFlight = countInFlight(active, (_request, requestClass) => isBusinessClass(requestClass));
     if (businessInFlight < MAX_BUSINESS_IN_FLIGHT) {
+        const hasQueuedForeground = list.some(request => classOf(request) === 'foreground');
         const nonForegroundInFlight = countInFlight(
             active,
             (_request, requestClass) => isBusinessClass(requestClass) && requestClass !== 'foreground',
@@ -145,7 +146,7 @@ function selectDispatchIndex(
             if (!isBusinessClass(requestClass)) continue;
             if ((perClassInFlight.get(requestClass) || 0) >= MAX_IN_FLIGHT_BY_CLASS[requestClass]) continue;
             if (requestClass !== 'foreground'
-                && nonForegroundInFlight >= MAX_NON_FOREGROUND_BUSINESS_IN_FLIGHT) continue;
+                && (hasQueuedForeground || nonForegroundInFlight >= MAX_NON_FOREGROUND_BUSINESS_IN_FLIGHT)) continue;
             eligible.push(index);
         }
 

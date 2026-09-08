@@ -10,7 +10,7 @@ export function normalizeBagMutationResponse(data, fallback = '操作失败') {
   if (payload.ok === true)
     return payload
 
-  const error = text(payload.error || payload.message, fallback)
+  const error = text(payload.errorMessage || payload.error || payload.message, fallback)
   return {
     ...payload,
     ok: false,
@@ -24,9 +24,9 @@ export function bagMutationFailure(cause, fallback = '操作失败') {
     ? cause.response.data
     : {}
   const status = Number(cause?.response?.status || 0)
-  const error = text(payload.error || payload.message || cause?.message, fallback)
+  const error = text(payload.errorMessage || payload.error || payload.message || cause?.message, fallback)
   const mayHaveReachedServer = status === 0 || status >= 500
-  const clearlyRejected = CLEAR_REJECTION_PATTERN.test(error)
+  const clearlyRejected = !!payload.errorMessage || !!payload.errorCode || CLEAR_REJECTION_PATTERN.test(error)
 
   return {
     ok: false,

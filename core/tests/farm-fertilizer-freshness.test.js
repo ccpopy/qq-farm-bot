@@ -17,12 +17,13 @@ function loadFertilizerWithStubs(t, options = {}) {
         filterLandIdsByTypes: landAnalysis.filterLandIdsByTypes,
         getLandTypeByLevel: landAnalysis.getLandTypeByLevel,
         getFastMatureLands: landAnalysis.getFastMatureLands,
+        getOrganicFertilizerTargetsFromLands: landAnalysis.getOrganicFertilizerTargetsFromLands,
     };
 
     const reads = [...(options.reads || [])];
     const calls = { reads: 0, normalTargets: [], organicTargets: [] };
     store.getAutomation = () => ({
-        fertilizer: 'smart',
+        fertilizer: options.mode || 'smart',
         fertilizer_land_types: options.landTypes || [...landAnalysis.ALL_FERTILIZER_LAND_TYPES],
         fertilizer_smart_seconds: 300,
     });
@@ -42,9 +43,10 @@ function loadFertilizerWithStubs(t, options = {}) {
     };
     landAnalysis.normalizeFertilizerLandTypes = value => [...value];
     landAnalysis.formatFertilizerLandTypes = () => ['全部土地'];
-    landAnalysis.filterLandIdsByTypes = targets => [...targets];
+    landAnalysis.filterLandIdsByTypes = targets => targets.filter(id => !(options.excludedLandIds || []).includes(id));
     landAnalysis.getLandTypeByLevel = () => 'normal';
     landAnalysis.getFastMatureLands = lands => (lands || []).map(land => Number(land.id));
+    landAnalysis.getOrganicFertilizerTargetsFromLands = lands => (lands || []).map(land => Number(land.id));
 
     delete require.cache[fertilizerModulePath];
     const fertilizer = require(fertilizerModulePath);
@@ -62,6 +64,7 @@ function loadFertilizerWithStubs(t, options = {}) {
             filterLandIdsByTypes: originals.filterLandIdsByTypes,
             getLandTypeByLevel: originals.getLandTypeByLevel,
             getFastMatureLands: originals.getFastMatureLands,
+            getOrganicFertilizerTargetsFromLands: originals.getOrganicFertilizerTargetsFromLands,
         });
         delete require.cache[fertilizerModulePath];
     });
@@ -133,4 +136,35 @@ test('manual fertilizer reports remaining seconds from the decoded fertilizer it
     const result = await fertilizer.fertilizeOwnLand(1, 'normal');
 
     assert.equal(result.fertilizerRemainingSec, 498268);
+});
+
+for (const mode of ['organic', 'both', 'smart']) {
+    test(`${mode} multi-season refertilization only touches harvested crops in the selected land types`, async (t) => {
+        const { fertilizer, calls } = loadFertilizerWithStubs(t, {
+            mode,
+            excludedLandIds: [22],
+        });
+        await fertilizer.runFertilizerByConfig([11, 22], {
+            reason: 'multi_season',
+            landsSnapshot: { lands: [{ id: 11 }, { id: 22 }, { id: 33 }] },
+        });
+        assert.equal(calls.reads, 0);
+        assert.deepEqual(calls.organicTargets, [[11]]);
+        assert.deepEqual(calls.normalTargets, mode === 'organic' ? [] : [[11]]);
+    });
+}
+
+test('an empty multi-season target list does not fall back to fertilizing the whole farm', async (t) => {
+    const { fertilizer, calls } = loadFertilizerWithStubs(t, { mode: 'organic' });
+    await fertilizer.runFertilizerByConfig([], { reason: 'multi_season' });
+    assert.equal(calls.reads, 0);
+    assert.deepEqual(calls.organicTargets, []);
+});
+
+test('disabled fertilizer makes no farm requests even after planting', async (t) => {
+    const { fertilizer, calls } = loadFertilizerWithStubs(t, { mode: 'none' });
+    await fertilizer.runFertilizerByConfig([11]);
+    assert.equal(calls.reads, 0);
+    assert.deepEqual(calls.normalTargets, []);
+    assert.deepEqual(calls.organicTargets, []);
 });

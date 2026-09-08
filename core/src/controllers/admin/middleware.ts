@@ -64,16 +64,42 @@ function getAccountIds(ctx: AdminContext): string[] {
 }
 
 const isSoftRuntimeError = (err: any): boolean => {
-    const message = String(err?.message || '');
+    const message = String(typeof err === 'string' ? err : err?.message || '');
     return message === '账号未运行' || message === 'API Timeout';
 };
 
+function isGatewayProtocolError(err: any): boolean {
+    const message = String(typeof err === 'string' ? err : err?.message || '').trim();
+    return String(err?.name || '') === 'GatewayError'
+        || typeof err?.errorMessage === 'string'
+        || typeof err?.error_message === 'string'
+        || (/^[\w-]+\.[\w.-]+/.test(message) && /\bcode=\d+\b/.test(message));
+}
+
+function getProtocolErrorMessage(err: any): string {
+    const direct = String(err?.errorMessage || err?.error_message || '').trim();
+    if (direct) return direct;
+    if (!isGatewayProtocolError(err)) return '';
+    const message = String(typeof err === 'string' ? err : err?.message || '').trim();
+    const code = /\bcode=\d+\b/.exec(message);
+    return code ? message.slice(code.index + code[0].length).trim() : '';
+}
+
 function handleApiError(res: Response, err: any, extra: Record<string, unknown> = {}): void {
-  if (isSoftRuntimeError(err)) {
-        res.json({ ok: false, error: err.message, ...extra });
+    const protocolMessage = getProtocolErrorMessage(err);
+    const payload: Record<string, unknown> = {
+        ok: false,
+        error: protocolMessage || (typeof err === 'string' ? err : err?.message) || 'Unknown error',
+        ...extra,
+    };
+    if (protocolMessage) payload.errorMessage = protocolMessage;
+    const errorCode = Number(err?.code);
+    if (Number.isFinite(errorCode) && errorCode !== 0) payload.errorCode = errorCode;
+    if (isSoftRuntimeError(err) || isGatewayProtocolError(err)) {
+        res.json(payload);
         return;
     }
-    res.status(500).json({ ok: false, error: err.message, ...extra });
+    res.status(500).json(payload);
 }
 
 function resolveAccId(ctx: AdminContext, rawRef: any): string {
@@ -114,6 +140,8 @@ module.exports = {
     getAccountList,
     getAccountIds,
     isSoftRuntimeError,
+    isGatewayProtocolError,
+    getProtocolErrorMessage,
     handleApiError,
     resolveAccId,
     getAccId,

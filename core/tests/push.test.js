@@ -42,3 +42,26 @@ test('buildDingTalkWebhook rejects non-DingTalk endpoints', () => {
         /钉钉 Webhook 地址格式无效/,
     );
 });
+
+test('MeoW uses an encoded nickname and reports business failures to the caller', async (t) => {
+    const axios = require('axios').default;
+    const { sendPushooMessage } = require('../dist/services/push');
+    const originalPost = axios.post;
+    let response = { status: 200, msg: 'ok' };
+    const calls = [];
+    axios.post = async (url, body) => {
+        calls.push({ url, body });
+        return { data: response };
+    };
+    t.after(() => { axios.post = originalPost; });
+    const payload = { channel: 'meow', token: 'test/name', title: 'test title', content: 'test message' };
+    assert.equal((await sendPushooMessage(payload)).ok, true);
+    assert.deepEqual(calls[0], {
+        url: 'https://api.chuckfang.com/test%2Fname',
+        body: { title: 'test title', msg: 'test message' },
+    });
+    response = { status: 400, msg: 'nickname unavailable' };
+    const failed = await sendPushooMessage(payload);
+    assert.equal(failed.ok, false);
+    assert.equal(failed.msg, 'nickname unavailable');
+});

@@ -1,5 +1,4 @@
 export {};
-const sharedState = require('./shared-state');
 const globalConfig = require('./global-config');
 const accountConfig = require('./account-config');
 const accounts = require('./accounts');
@@ -47,6 +46,8 @@ module.exports = {
     // Global config
     getUI: globalConfig.getUI,
     setUITheme: globalConfig.setUITheme,
+    getLoginSettings: globalConfig.getLoginSettings,
+    setLoginSettings: globalConfig.setLoginSettings,
     getOfflineReminder: globalConfig.getOfflineReminder,
     setOfflineReminder: globalConfig.setOfflineReminder,
 

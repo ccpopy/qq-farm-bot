@@ -8,6 +8,14 @@ import {
   normalizeBagMutationResponse,
 } from '../src/utils/bag-mutation.js'
 
+test('protocol rejections retain the server message without suggesting an uncertain retry', () => {
+  const data = { ok: false, error: 'protocol error', errorMessage: '化肥已满', errorCode: 10001 }
+  assert.equal(normalizeBagMutationResponse(data).error, '化肥已满')
+  const result = bagMutationFailure({ response: { status: 500, data } })
+  assert.equal(result.error, '化肥已满')
+  assert.equal(result.uncertain, false)
+})
+
 test('HTTP 500 keeps the backend reason and marks the mutation result uncertain', () => {
   const result = bagMutationFailure({
     message: 'Request failed with status code 500',
