@@ -476,7 +476,7 @@ watch(pet, (value) => {
         <h2 id="pet-exchange-title">
           兑换
         </h2><button class="pet-dialog-close" aria-label="关闭兑换窗口" @click="exchangeDialog?.close()">
-          ×
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
         </button>
       </header>
       <div v-if="exchangeItem" class="pet-dialog-body">
@@ -486,9 +486,9 @@ watch(pet, (value) => {
         <label class="pet-quantity-label" for="pet-exchange-quantity">兑换数量</label>
         <div class="pet-quantity">
           <button :disabled="!!pending || exchangeQuantity <= 1" aria-label="减少兑换数量" @click="exchangeQuantity = Math.max(1, (Number(exchangeQuantity) || 1) - 1)">
-            −
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
           </button><input id="pet-exchange-quantity" v-model.number="exchangeQuantity" type="number" inputmode="numeric" min="1" :max="exchangeLimit" :disabled="!!pending"><button :disabled="!!pending || exchangeQuantity >= exchangeLimit" aria-label="增加兑换数量" @click="exchangeQuantity = Math.min(exchangeLimit, (Number(exchangeQuantity) || 0) + 1)">
-            +
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" /></svg>
           </button><button :disabled="!!pending || !affordableQuantity" @click="exchangeQuantity = affordableQuantity">
             最大
           </button>
@@ -1779,11 +1779,10 @@ watch(pet, (value) => {
 .pet-record-dialog {
   width: min(620px, calc(100vw - 40px));
 }
-.pet-record-dialog .pet-dialog-close {
-  padding: 0;
-}
-.pet-record-dialog .pet-dialog-close svg {
+.pet-dialog-close svg,
+.pet-quantity svg {
   display: block;
+  flex: none;
   width: 26px;
   height: 26px;
   fill: none;
@@ -1809,19 +1808,17 @@ watch(pet, (value) => {
   position: absolute;
   top: -21px;
   right: -20px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 48px;
   height: 48px;
-  padding: 0 0 6px;
+  padding: 0;
   border: 3px solid #f6c291;
   border-radius: 45%;
   color: #fff7df;
   background: #e39c6b;
   box-shadow: 0 3px 0 #b5754c;
-  font-size: 44px !important;
-  font-weight: 800 !important;
-  line-height: 1;
   cursor: pointer;
 }
 .pet-dialog-body {
@@ -1871,8 +1868,9 @@ watch(pet, (value) => {
   box-shadow: inset 0 2px 4px #ae854515;
 }
 .pet-quantity button {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
   min-width: 37px;
   height: 37px;
@@ -1884,7 +1882,12 @@ watch(pet, (value) => {
   box-shadow: 0 3px 0 #655f535e;
   font-size: 23px;
   font-weight: 800;
+  line-height: 1;
   cursor: pointer;
+}
+.pet-quantity svg {
+  width: 20px;
+  height: 20px;
 }
 .pet-quantity button:last-child {
   font-size: 12px;
