@@ -7,8 +7,8 @@ import { useStatusStore } from '@/stores/status'
 
 const statusStore = useStatusStore()
 const accountStore = useAccountStore()
-const { status, dailyGifts, dailyGiftsLoading, dailyGiftsError, loading: statusLoading, realtimeConnected } = storeToRefs(statusStore)
-const { currentAccountId, currentAccount } = storeToRefs(accountStore)
+const { currentAccountConnected: isConnected, dailyGifts, dailyGiftsLoading, dailyGiftsError, loading: statusLoading } = storeToRefs(statusStore)
+const { currentAccountId } = storeToRefs(accountStore)
 
 const growth = computed(() => dailyGifts.value?.growth || null)
 const growthCurrentTask = computed(() => growth.value?.currentTask || growth.value?.tasks?.[0] || null)
@@ -17,7 +17,7 @@ const taskEmptyText = computed(() => {
     return '请登录账号后查看'
   if (accountStore.loading || statusLoading.value)
     return '正在加载账号状态…'
-  if (!status.value?.connection?.connected)
+  if (!isConnected.value)
     return '账号未登录，请先运行账号或检查网络连接'
   if (dailyGiftsError.value)
     return '任务加载失败，请重试'
@@ -26,16 +26,12 @@ const taskEmptyText = computed(() => {
 
 async function refresh() {
   const id = currentAccountId.value
-  if (!id || !currentAccount.value?.running)
-    return
-  if (!realtimeConnected.value)
-    await statusStore.fetchStatus(id)
-  if (id === currentAccountId.value && currentAccount.value?.running && status.value?.connection?.connected)
+  if (id && isConnected.value)
     await statusStore.fetchDailyGifts(id)
 }
 
 // 账号列表和连接快照可能晚于面板挂载到达，就绪后自动补加载。
-watch([currentAccountId, () => currentAccount.value?.running, () => !!status.value?.connection?.connected], refresh, { immediate: true })
+watch([currentAccountId, isConnected], refresh, { immediate: true })
 
 function formatTaskProgress(task: any) {
   if (!task)
@@ -67,7 +63,7 @@ function formatTaskProgress(task: any) {
     <DailyOverview :daily-gifts="dailyGifts" :empty-text="taskEmptyText" />
     <div v-if="dailyGiftsError" class="flex items-center justify-between gap-3 farm-card rounded-xl p-4 text-sm" role="alert">
       <span>{{ dailyGiftsError }}</span>
-      <button class="shrink-0 text-green-600" :disabled="dailyGiftsLoading || !status?.connection?.connected" @click="refresh">
+      <button class="shrink-0 text-green-600" :disabled="dailyGiftsLoading || !isConnected" @click="refresh">
         重新加载
       </button>
     </div>
@@ -103,7 +99,7 @@ function formatTaskProgress(task: any) {
         </div>
       </div>
       <div
-        v-else-if="!status?.connection?.connected"
+        v-else-if="!isConnected"
         class="flex flex-col items-center justify-center gap-3 rounded-xl py-8 text-center"
         style="background: color-mix(in srgb, var(--theme-bg, #fff) 90%, var(--theme-primary, #3b82f6))"
       >

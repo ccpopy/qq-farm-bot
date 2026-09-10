@@ -5,19 +5,21 @@ import { NModal } from 'naive-ui/es/modal'
 import { NProgress } from 'naive-ui/es/progress'
 import { NTab, NTabs } from 'naive-ui/es/tabs'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAccountStore } from '@/stores/account'
 import { useIllustratedStore } from '@/stores/illustrated'
+import { useStatusStore } from '@/stores/status'
 
 const accountStore = useAccountStore()
 const illustratedStore = useIllustratedStore()
-const { currentAccountId, currentAccount } = storeToRefs(accountStore)
+const statusStore = useStatusStore()
+const { currentAccountId } = storeToRefs(accountStore)
+const { currentAccountConnected: isConnected } = storeToRefs(statusStore)
 const { data, loading, error } = storeToRefs(illustratedStore)
 const currentType = ref<'crop' | 'mutant'>('crop')
 const detailsOpen = ref(false)
 
 const book = computed(() => data.value?.[currentType.value] || null)
-const isConnected = computed(() => !!currentAccount.value?.running)
 const collectedCount = computed(() => (Array.isArray(book.value?.items) ? book.value.items : []).filter((item: any) => item.unlocked).length)
 const currentBonuses = computed(() => {
   const bonuses = Array.isArray(book.value?.attributeBonuses) ? book.value.attributeBonuses : []
@@ -58,12 +60,11 @@ async function refresh() {
     await illustratedStore.fetch(currentAccountId.value)
 }
 
-onMounted(refresh)
 watch(currentAccountId, () => {
+  detailsOpen.value = false
   illustratedStore.reset()
-  void refresh()
-})
-watch(isConnected, refresh)
+}, { flush: 'sync' })
+watch([currentAccountId, isConnected], refresh, { immediate: true })
 </script>
 
 <template>

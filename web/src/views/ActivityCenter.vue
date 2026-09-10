@@ -408,7 +408,7 @@ onUnmounted(() => {
           <span class="activity-entry__icon"><img v-if="activity.gameplayKey === 'pet'" src="/activity-assets/pet-diary/S3Open_dog_1.png" alt="" style="width: 36px; height: 36px; object-fit: contain"><span v-else class="i-carbon-calendar" /></span>
           <span class="activity-entry__status">{{ activityStatusLabel(activity) }}</span>
         </span>
-        <strong>{{ activity.name }}</strong>
+        <strong>{{ activity.gameplayKey === 'pet' ? '萌宠日记' : activity.name }}</strong>
         <span class="activity-entry__period">{{ formatActivityPeriod(activity) }}</span>
         <span class="activity-entry__footer">
           <small>{{ activity.id }}</small>

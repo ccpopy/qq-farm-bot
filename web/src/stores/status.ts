@@ -2,7 +2,7 @@ import type { Socket } from 'socket.io-client'
 import { useStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { io } from 'socket.io-client'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import api, { getApiErrorMessage } from '@/api'
 import { useAccountStore } from '@/stores/account'
 
@@ -44,6 +44,14 @@ export const useStatusStore = defineStore('status', () => {
   const currentRealtimeAccountId = ref('')
   const tokenRef = useStorage('admin_token', '')
 
+  // 账号列表的 running 是请求时的快照；面板就绪以当前账号的实时连接为准。
+  const currentAccountConnected = computed(() => {
+    const accountId = String(accountStore.currentAccountId || '')
+    return !!accountId
+      && String(status.value?.accountId || '') === accountId
+      && !!status.value?.connection?.connected
+  })
+
   let socket: Socket | null = null
   let statusRequestSequence = 0
   let diamondRequestSequence = 0
@@ -51,6 +59,10 @@ export const useStatusStore = defineStore('status', () => {
   let pendingDailyGifts: Promise<void> | null = null
 
   watch(() => accountStore.currentAccountId, () => {
+    statusRequestSequence++
+    status.value = null
+    loading.value = false
+    error.value = ''
     dailyGiftsSequence++
     pendingDailyGifts = null
     dailyGifts.value = null
@@ -82,7 +94,7 @@ export const useStatusStore = defineStore('status', () => {
   function handleRealtimeStatus(payload: any) {
     const body = (payload && typeof payload === 'object') ? payload : {}
     const accountId = String(body.accountId || '')
-    if (currentRealtimeAccountId.value && accountId !== currentRealtimeAccountId.value)
+    if (!accountId || accountId !== accountStore.currentAccountId || accountId !== currentRealtimeAccountId.value)
       return
     if (body.status && typeof body.status === 'object') {
       statusRequestSequence++
@@ -186,7 +198,7 @@ export const useStatusStore = defineStore('status', () => {
   }
 
   async function fetchStatus(accountId: string) {
-    if (!accountId)
+    if (!accountId || accountId !== accountStore.currentAccountId)
       return
     const sequence = ++statusRequestSequence
     loading.value = true
@@ -303,6 +315,7 @@ export const useStatusStore = defineStore('status', () => {
 
   return {
     status,
+    currentAccountConnected,
     logs,
     dailyGifts,
     dailyGiftsLoading,

@@ -6,7 +6,7 @@ import { NInputNumber } from 'naive-ui/es/input-number'
 import { NModal } from 'naive-ui/es/modal'
 import { NTag } from 'naive-ui/es/tag'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useAccountStore } from '@/stores/account'
 import { useBagStore } from '@/stores/bag'
 import { usePetStore } from '@/stores/pet'
@@ -18,8 +18,8 @@ const bagStore = useBagStore()
 const petStore = usePetStore()
 const statusStore = useStatusStore()
 const toastStore = useToastStore()
-const { currentAccountId, currentAccount } = storeToRefs(accountStore)
-const { status, loading: statusLoading, realtimeConnected } = storeToRefs(statusStore)
+const { currentAccountId } = storeToRefs(accountStore)
+const { currentAccountConnected: isConnected, loading: statusLoading } = storeToRefs(statusStore)
 const {
   snapshot,
   dogs,
@@ -40,7 +40,6 @@ const useCounts = reactive<Record<number, number>>({})
 const tokenRef = useStorage('admin_token', '')
 const showProtectLogs = ref(false)
 
-const isConnected = computed(() => !!status.value?.connection?.connected)
 const maxDuration = computed(() => Number(snapshot.value?.maxProtectDuration || 30 * 86400))
 const protectDuration = computed(() => Math.max(0, Number(snapshot.value?.protectDuration || 0)))
 const durationPercent = computed(() => Math.min(100, Math.round((protectDuration.value / maxDuration.value) * 100)))
@@ -130,18 +129,7 @@ async function handlePetOperation(pet: PetInfo) {
 
 async function loadPetInfo() {
   const id = String(currentAccountId.value || '')
-  const account = currentAccount.value
-  if (!id || !account)
-    return
-  if (!realtimeConnected.value)
-    await statusStore.fetchStatus(id)
-  if (account.running && isConnected.value)
-    await petStore.fetchPetInfo(id)
-}
-
-async function refreshPetInfo() {
-  const id = String(currentAccountId.value || '')
-  if (id)
+  if (id && isConnected.value)
     await petStore.fetchPetInfo(id)
 }
 
@@ -192,12 +180,11 @@ function setUseCount(food: DogFoodInfo, value: number | null) {
   useCounts[food.id] = Math.max(1, Math.trunc(Number(value) || 1))
 }
 
-onMounted(loadPetInfo)
 watch(currentAccountId, () => {
   showProtectLogs.value = false
   petStore.clear()
-  void loadPetInfo()
-})
+}, { flush: 'sync' })
+watch([currentAccountId, isConnected], loadPetInfo, { immediate: true })
 </script>
 
 <template>
@@ -220,7 +207,7 @@ watch(currentAccountId, () => {
         </NButton>
         <NButton
           circle quaternary size="small" title="刷新宠物信息" :loading="loading || statusLoading"
-          :disabled="!currentAccountId || !isConnected || !tokenRef" @click="refreshPetInfo"
+          :disabled="!currentAccountId || !isConnected || !tokenRef" @click="loadPetInfo"
         >
           <span class="i-carbon-renew" />
         </NButton>

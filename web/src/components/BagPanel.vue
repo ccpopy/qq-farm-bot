@@ -19,10 +19,10 @@ const petStore = usePetStore()
 const statusStore = useStatusStore()
 const toastStore = useToastStore()
 
-const { currentAccountId, currentAccount } = storeToRefs(accountStore)
+const { currentAccountId } = storeToRefs(accountStore)
 const { items, loading: bagLoading, originalItems } = storeToRefs(bagStore)
 const { snapshot: petSnapshot, activeDog, error: petError } = storeToRefs(petStore)
-const { status, loading: statusLoading, error: statusError, realtimeConnected } = storeToRefs(statusStore)
+const { currentAccountConnected: isConnected, loading: statusLoading, error: statusError } = storeToRefs(statusStore)
 
 const imageErrors = ref<Record<string, boolean>>({})
 
@@ -633,21 +633,14 @@ function handleBatchActionClick() {
 
 async function loadBag() {
   const id = currentAccountId.value
-  if (!id || !currentAccount.value?.running)
+  if (!id || !isConnected.value)
     return false
 
   try {
-    if (!realtimeConnected.value)
-      await statusStore.fetchStatus(id)
-
-    if (id === currentAccountId.value && currentAccount.value?.running && status.value?.connection?.connected) {
-      const refreshed = await bagStore.fetchBag(id)
-      if (refreshed)
-        imageErrors.value = {}
-      return refreshed
-    }
-
-    return false
+    const refreshed = await bagStore.fetchBag(id)
+    if (refreshed)
+      imageErrors.value = {}
+    return refreshed
   }
   catch (cause) {
     console.error(cause)
@@ -669,7 +662,7 @@ watch(currentAccountId, () => {
 })
 
 // 账号列表和连接快照可能晚于面板挂载到达，就绪后自动补加载。
-watch([currentAccountId, () => currentAccount.value?.running, () => !!status.value?.connection?.connected], loadBag, { immediate: true })
+watch([currentAccountId, isConnected], loadBag, { immediate: true })
 
 watch(selectedCategory, () => {
   batchAction.value = null
@@ -695,7 +688,7 @@ useIntervalFn(loadBag, 60000)
           size="small"
           title="刷新背包"
           :loading="bagLoading"
-          :disabled="!currentAccountId || !status?.connection?.connected"
+          :disabled="!currentAccountId || !isConnected"
           @click="loadBag"
         >
           <span class="i-carbon-renew" />
@@ -720,7 +713,7 @@ useIntervalFn(loadBag, 60000)
       </div>
     </div>
 
-    <div v-else-if="!status?.connection?.connected" class="flex flex-col items-center justify-center gap-4 farm-card rounded-xl p-12 text-center text-gray-500">
+    <div v-else-if="!isConnected" class="flex flex-col items-center justify-center gap-4 farm-card rounded-xl p-12 text-center text-gray-500">
       <div class="i-carbon-network-4 text-4xl" style="opacity: 0.5" />
       <div>
         <div class="text-lg font-medium" style="color: var(--theme-text, #374151)">
