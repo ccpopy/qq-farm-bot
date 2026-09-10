@@ -202,6 +202,25 @@ test('permanent bichon appears in the pet catalog with the official skill', () =
     assert.equal(skills.find(s=>s.skillId===3001).name,'比熊润田');
 });
 
+test('pet mutations expose official names, icons and the paradise/golden crop combinations', () => {
+    const fs = require('node:fs');
+    const { getMutantEffectsByIds, getMutantDisplayPlantId, getPlantById } = require('../dist/config/gameConfig');
+    const { buildLandDetail } = require('../dist/services/farm/land-analysis');
+    const effects = getMutantEffectsByIds([15, 16]);
+    assert.deepEqual(effects.map(e => [e.id, e.name, e.icon]), [[15, '比熊', 'bichon'], [16, '乐园', 'leyuan']]);
+    assert.equal(effects[0].description, '比熊犬处于看护状态时概率触发');
+    assert.equal(effects[1].description, '种植泡泡棉花糖有概率出现');
+    for (const id of [15, 16]) assert.ok(fs.existsSync(path.join(__dirname, `../src/gameConfig/seed_images_named/mutant/${id}.png`)));
+    assert.equal(getMutantDisplayPlantId(1029004, [16]), 1028004);
+    assert.equal(getMutantDisplayPlantId(1029004, [5, 16]), 1128004);
+    assert.equal(getMutantDisplayPlantId(1029004, [16, 5]), 1128004);
+    assert.equal(getPlantById(1028004).fruit.id, 204008);
+    const now = Math.floor(Date.now() / 1000);
+    const detail = buildLandDetail({ id: 1, unlocked: true, plant: { id: 1029004, mutant_config_ids: [15, 16], phases: [{ phase: 2, begin_time: now - 60 }, { phase: 6, begin_time: now + 3600 }] } });
+    assert.equal(detail.plantName, '比熊棉花糖');
+    assert.deepEqual(detail.mutantEffects.map(effect => effect.name), ['比熊', '乐园']);
+});
+
 test('solar gift uses the captured claim result and a second claim is blocked', async () => {
     const h=harness({solarClaimable:true});
     const result=await h.service.operatePetDiary('solar',{termId:'301'});
