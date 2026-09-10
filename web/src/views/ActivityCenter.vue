@@ -17,6 +17,7 @@ import { WeatherActivityView } from '@/components/activity/gameplays/weather'
 import { useAccountStore } from '@/stores/account'
 import { useActivityCenterStore } from '@/stores/activity-center'
 import { useFriendStore } from '@/stores/friend'
+import PetDiaryPage from './activity-center/PetDiaryPage.vue'
 
 const router = useRouter()
 const notification = useNotification()
@@ -206,6 +207,8 @@ async function openActivity(activity: ActivityDirectoryItemDto) {
   if (gameplay.module.key === 'stellar')
     activeTab.value = gameplay.entryTab as ActivityTab
   selectedActivity.value = gameplay.module.key
+  if (gameplay.module.key === 'pet')
+    return
   const detailsLoaded = await activityStore.loadDetails(accountId(), gameplay.module.key)
   if (gameplay.module.key === 'qixi' && currentAccountId.value) {
     await friendStore.fetchFriends(String(currentAccountId.value))
@@ -402,7 +405,7 @@ onUnmounted(() => {
         @click="openActivity(activity)"
       >
         <span class="activity-entry__topline">
-          <span class="activity-entry__icon"><span class="i-carbon-calendar" /></span>
+          <span class="activity-entry__icon"><img v-if="activity.gameplayKey === 'pet'" src="/activity-assets/pet-diary/S3Open_dog_1.png" alt="" style="width: 36px; height: 36px; object-fit: contain"><span v-else class="i-carbon-calendar" /></span>
           <span class="activity-entry__status">{{ activityStatusLabel(activity) }}</span>
         </span>
         <strong>{{ activity.name }}</strong>
@@ -417,6 +420,8 @@ onUnmounted(() => {
       </button>
     </div>
   </section>
+
+  <PetDiaryPage v-else-if="selectedActivity === 'pet'" @back="selectedActivity = null" />
 
   <ActivityShell v-else-if="selectedActivity === 'stellar'" :theme="theme">
     <div class="activity-center">

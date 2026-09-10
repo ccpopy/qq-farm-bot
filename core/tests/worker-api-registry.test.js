@@ -65,6 +65,9 @@ test('worker API registry preserves the existing IPC method surface', () => {
         'getLands',
         'getMallCatalog',
         'getMysteryShop',
+        'getPetDiary',
+        'getPetDiaryFriend',
+        'getPetDiaryRecords',
         'getPetInfo',
         'getPetProtectLogs',
         'getSchedulers',
@@ -74,6 +77,7 @@ test('worker API registry preserves the existing IPC method surface', () => {
         'giftQixiSachet',
         'lightConstellation',
         'lightWeatherResearch',
+        'operatePetDiary',
         'purchaseMallProduct',
         'purchaseMysteryOffer',
         'scanWeatherFriends',
@@ -133,4 +137,36 @@ test('only explicit local operations bypass account serialization', () => {
     ]);
     assert.equal(registry.get('getFriendLands').execution, 'queued');
     assert.equal(registry.get('getCurrentWeatherActivity').execution, 'queued');
+});
+
+test('pet diary IPC reaches the activity service through the account queue', async (t) => {
+    const activity = require('../dist/services/activity-center/index');
+    const { executeWorkerApiCall } = require('../dist/app/worker-api-dispatcher');
+    const examples = [
+        ['getPetDiary', []],
+        ['getPetDiaryFriend', ['1001851355']],
+        ['getPetDiaryRecords', ['plunder']],
+        ['operatePetDiary', ['openTreasure', {}]],
+    ];
+    const calls = [];
+    const queued = [];
+    for (const [method] of examples) {
+        t.mock.method(activity, method, (...args) => {
+            calls.push([method, args]);
+            return { method };
+        });
+    }
+    const registry = createRegistry();
+    for (const [method, args] of examples) {
+        const response = await executeWorkerApiCall(method, args, registry, {
+            isAccountReady: () => true,
+            submitTask: async (name, run, options) => {
+                queued.push([name, options.priority]);
+                return run();
+            },
+        });
+        assert.deepEqual(response, { result: { method }, error: null });
+    }
+    assert.deepEqual(calls, examples);
+    assert.deepEqual(queued, examples.map(([method]) => [`api:${method}`, 'interactive']));
 });

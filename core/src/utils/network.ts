@@ -44,6 +44,7 @@ interface ConnectionContext {
     intentionalClose: boolean;
     finalized: boolean;
     loginInitialized: boolean;
+    sendTail?: Promise<void>;
 }
 
 interface SendMsgOptions {
@@ -237,7 +238,7 @@ function drainRequestQueue(): void {
                 drainRequestQueue();
             },
         } : undefined;
-        sendMsg(request.context, request.serviceName, request.methodName, request.bodyBytes, pending).then((sent) => {
+        sendMsg(request.context, request.serviceName, request.methodName, request.bodyBytes, pending, () => !request.settled).then((sent) => {
             if (sent) {
                 if (!request.expectReply) {
                     settleQueuedRequest(request, undefined, { body: Buffer.alloc(0), meta: {} });
@@ -367,7 +368,7 @@ function isCurrentConnection(context: ConnectionContext): boolean {
     return currentConnection === context && ws === context.socket && !context.finalized;
 }
 
-async function sendMsg(context: ConnectionContext, serviceName: string, methodName: string, bodyBytes: Buffer, pending?: PendingRequest): Promise<boolean> {
+async function sendMsg(context: ConnectionContext, serviceName: string, methodName: string, bodyBytes: Buffer, pending?: PendingRequest, shouldSend = () => true): Promise<boolean> {
     if (!isCurrentConnection(context) || context.socket.readyState !== WebSocket.OPEN) {
         log('系统', '[WS] 连接未打开');
         return false;
@@ -376,25 +377,22 @@ async function sendMsg(context: ConnectionContext, serviceName: string, methodNa
     clientSeq += 1;
     // 加密前登记在途请求，确保排队器能准确计算并发槽位。
     if (pending) pendingCallbacks.set(seq, pending);
-    const encoded = await encodeMsg(serviceName, methodName, bodyBytes, seq);
-    if (pending && pendingCallbacks.get(seq) !== pending) return false;
-    if (!isCurrentConnection(context) || context.socket.readyState !== WebSocket.OPEN) {
-        if (pending) {
-            pendingCallbacks.delete(seq);
-            pending.callback(new Error(`连接未打开: ${methodName}`));
-        }
-        return false;
-    }
-    try {
+    // Preserve sequence and token order across async encryption (empty bodies do
+    // not await crypto). Serialize only encoding + socket.send, never responses:
+    // heartbeat and ACE retain their independent in-flight lanes.
+    const send = async () => {
+        const valid = () => shouldSend() && isCurrentConnection(context)
+            && context.socket.readyState === WebSocket.OPEN
+            && (!pending || pendingCallbacks.get(seq) === pending);
+        if (!valid()) return false;
+        const encoded = await encodeMsg(serviceName, methodName, bodyBytes, seq);
+        if (!valid()) return false;
         context.socket.send(encoded);
-    } catch (err: any) {
-        if (pending) {
-            pendingCallbacks.delete(seq);
-            pending.callback(err);
-        }
-        return false;
-    }
-    return true;
+        return true;
+    };
+    const result = (context.sendTail || Promise.resolve()).then(send, send);
+    context.sendTail = result.then(() => undefined, () => undefined);
+    return result;
 }
 
 /** Promise 版发送 */
@@ -998,6 +996,15 @@ function finalizeConnection(context: ConnectionContext, details: DisconnectDetai
     context.finalized = true;
     const wasCurrent = currentConnection === context;
     const wasLoginReady = context.phase === 'online';
+    // Capture before clearing queues/user state; otherwise the final log always
+    // reports zero pressure and loses the evidence needed to diagnose a stop.
+    const diagnostics = {
+        ...getGatewayLoad(),
+        lastInboundAgeMs: Math.max(0, Date.now() - lastInboundAt),
+        lastHeartbeatAgeMs: Math.max(0, Date.now() - lastHeartbeatResponse),
+        pendingRequests: describePendingRequests(),
+        queuedRequests: describeQueuedRequests(),
+    };
     if (wasCurrent) {
         currentConnection = null;
         ws = null;
@@ -1011,6 +1018,7 @@ function finalizeConnection(context: ConnectionContext, details: DisconnectDetai
         reason: details.reason || '',
         phase: context.phase,
         wasLoginReady,
+        diagnostics,
         at: Date.now(),
     });
 }

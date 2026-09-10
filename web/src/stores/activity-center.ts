@@ -2,8 +2,8 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import api from '@/api'
 
-export type ActivityTabKey = 'travel' | 'constellation' | 'shop' | 'solar' | 'qixi' | 'qingmei' | 'charity' | 'weather'
-export type ActivityGameplayKey = 'stellar' | 'qixi' | 'qingmei' | 'charity' | 'weather'
+export type ActivityTabKey = 'travel' | 'constellation' | 'shop' | 'solar' | 'qixi' | 'qingmei' | 'charity' | 'weather' | 'pet'
+export type ActivityGameplayKey = 'stellar' | 'qixi' | 'qingmei' | 'charity' | 'weather' | 'pet'
 export type ActivityVariant = 'blue' | 'violet' | 'gold' | 'green'
 export type ActivityRecord = Record<string, unknown>
 
@@ -938,13 +938,13 @@ function normalizeSolarTerms(value: unknown): SolarTermsDto | null {
 function normalizeActivityDirectory(value: unknown): ActivityDirectoryItemDto[] {
   return records(value).map((entry) => {
     const detailTarget = text(entry.detailTarget, entry.detail_target)
-    const normalizedDetailTarget = ['travel', 'constellation', 'shop', 'solar', 'qixi', 'qingmei', 'charity', 'weather'].includes(detailTarget)
+    const normalizedDetailTarget = ['travel', 'constellation', 'shop', 'solar', 'qixi', 'qingmei', 'charity', 'weather', 'pet'].includes(detailTarget)
       ? detailTarget as ActivityTabKey
       : null
     const gameplayKey = text(entry.gameplayKey, entry.gameplay_key)
     const rawGameplayTargets = first(entry.gameplayTargets, entry.gameplay_targets)
     const gameplayTargets = Array.isArray(rawGameplayTargets)
-      ? rawGameplayTargets.map(value => text(value)).filter((value): value is ActivityTabKey => ['travel', 'constellation', 'shop', 'solar', 'qixi', 'qingmei', 'charity', 'weather'].includes(value))
+      ? rawGameplayTargets.map(value => text(value)).filter((value): value is ActivityTabKey => ['travel', 'constellation', 'shop', 'solar', 'qixi', 'qingmei', 'charity', 'weather', 'pet'].includes(value))
       : []
     const id = text(entry.id, entry.activityId, entry.activity_id)
     const rawActivityIds = first(entry.activityIds, entry.activity_ids)
@@ -957,17 +957,19 @@ function normalizeActivityDirectory(value: unknown): ActivityDirectoryItemDto[] 
       name: text(entry.name, entry.title),
       startTime: toMilliseconds(first(entry.startTime, entry.start_time, entry.beginTime, entry.begin_time)),
       endTime: toMilliseconds(first(entry.endTime, entry.end_time)),
-      gameplayKey: gameplayKey === 'weather' || normalizedDetailTarget === 'weather'
-        ? 'weather' as const
-        : gameplayKey === 'charity' || normalizedDetailTarget === 'charity'
-          ? 'charity' as const
-          : gameplayKey === 'qingmei' || normalizedDetailTarget === 'qingmei'
-            ? 'qingmei' as const
-            : gameplayKey === 'qixi' || normalizedDetailTarget === 'qixi'
-              ? 'qixi' as const
-              : gameplayKey === 'stellar' || normalizedDetailTarget
-                ? 'stellar' as const
-                : null,
+      gameplayKey: gameplayKey === 'pet' || normalizedDetailTarget === 'pet'
+        ? 'pet' as const
+        : gameplayKey === 'weather' || normalizedDetailTarget === 'weather'
+          ? 'weather' as const
+          : gameplayKey === 'charity' || normalizedDetailTarget === 'charity'
+            ? 'charity' as const
+            : gameplayKey === 'qingmei' || normalizedDetailTarget === 'qingmei'
+              ? 'qingmei' as const
+              : gameplayKey === 'qixi' || normalizedDetailTarget === 'qixi'
+                ? 'qixi' as const
+                : gameplayKey === 'stellar' || normalizedDetailTarget
+                  ? 'stellar' as const
+                  : null,
       gameplayTargets: gameplayTargets.length > 0 ? gameplayTargets : normalizedDetailTarget ? [normalizedDetailTarget] : [],
       detailTarget: normalizedDetailTarget,
     }

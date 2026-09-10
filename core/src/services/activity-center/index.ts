@@ -11,8 +11,13 @@ const constellation = require('./constellation');
 const qingMei = require('./qingmei');
 const qixi = require('./qixi');
 const charity = require('./charity');
+const petDiary = require('./pet-diary-runtime');
 
 module.exports = {
+    getPetDiary: petDiary.getPetDiary,
+    operatePetDiary: petDiary.operatePetDiary,
+    getPetDiaryRecords: petDiary.getPetDiaryRecords,
+    getPetDiaryFriend: petDiary.getPetDiaryFriend,
     buildActivityDirectory: snapshot.buildActivityDirectory,
     getActivityDirectorySnapshot: snapshot.getActivityDirectorySnapshot,
     getActivityCenterSnapshot: snapshot.getActivityCenterSnapshot,

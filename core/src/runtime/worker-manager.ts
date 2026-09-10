@@ -7,6 +7,10 @@ const DEFAULT_API_CALL_TIMEOUT_MS = 10000;
 // 好友现场天气需要逐个 Enter/Leave，单批最多 5 位好友；
 // 好友列表只读缓存或拉一次名单，给的余量少一些。
 const API_CALL_TIMEOUTS_MS: Record<string, number> = {
+    getPetDiary: 90000,
+    operatePetDiary: 180000,
+    getPetDiaryRecords: 30000,
+    getPetDiaryFriend: 30000,
     scanWeatherFriends: 60000,
     getFriends: 30000,
     getWeatherFriends: 30000,
@@ -76,6 +80,7 @@ function createWorkerManager(options: WorkerManagerOptions) {
 
     function createThreadWorker(account: any): any {
         const workerOptions: any = {
+            env: { ...processRef.env, FARM_ACCOUNT_ID: String(account.id || '') },
             workerData: {
                 accountId: String(account.id || ''),
                 channel: 'thread',
@@ -399,12 +404,14 @@ function createWorkerManager(options: WorkerManagerOptions) {
                 }
                 worker.requests.clear();
             }
-            log('系统', `账号 ${worker.name} 连接已断开，已停止运行并等待 Helper 刷新 Code 或重新扫码`, {
+            log('系统', `账号 ${worker.name} 连接已断开（${source}，状态码 ${code}），已停止运行并等待 Helper 刷新 Code 或重新扫码`, {
                 accountId: String(accountId),
                 accountName: worker.name,
                 source,
-                code,
+                disconnectCode: code,
                 phase,
+                reason,
+                diagnostics: msg.diagnostics || null,
             });
             triggerOfflineReminder({
                 accountId,
@@ -417,7 +424,7 @@ function createWorkerManager(options: WorkerManagerOptions) {
                 `账号 ${worker.name} 连接已断开，已停止运行并等待 Helper 刷新 Code 或重新扫码`,
                 accountId,
                 worker.name,
-                { source, code, reason, phase, connectionId: Number(msg.connectionId) || 0 },
+                { source, disconnectCode: code, reason, phase, connectionId: Number(msg.connectionId) || 0, diagnostics: msg.diagnostics || null },
             );
             stopWorker(accountId);
         } else if (msg.type === 'api_call_started') {

@@ -257,6 +257,9 @@ async function loadProto(): Promise<void> {
     types.GiftQixiSachetRequest = root.lookupType('gamepb.activitypb.GiftQixiSachetRequest');
     types.CharityRedFlowerOperateRequest = root.lookupType('gamepb.activitypb.CharityRedFlowerOperateRequest');
     types.ActivityOperateReply = root.lookupType('gamepb.activitypb.ActivityOperateReply');
+    for (const name of ['PetDiaryOperateRequest', 'PetDiaryOperateReply', 'PetDiaryGetGroupReply']) {
+        types[name] = root.lookupType(`gamepb.activitypb.${name}`);
+    }
     types.GetWeatherStatusRequest = root.lookupType('gamepb.weatherpb.GetWeatherStatusRequest');
     types.GetWeatherStatusReply = root.lookupType('gamepb.weatherpb.GetWeatherStatusReply');
     types.GetSeasonInfoRequest = root.lookupType('gamepb.seasonpb.GetSeasonInfoRequest');
