@@ -101,6 +101,7 @@ function buildActivityDirectory(windows: any[], season: any, shop: any, solarTer
     }
     return groups.map(group => ({
         ...group,
+        name: group.activityIds.some((id: string) => ['2026090100', '2026090101', '2026090102', '2026090103'].includes(id)) ? '萌宠成长日记' : group.name,
         ...resolveActivityGameplays(group.activityIds, gameplayBindings),
     }));
 }

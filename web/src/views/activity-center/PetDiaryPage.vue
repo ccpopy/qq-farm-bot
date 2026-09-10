@@ -22,7 +22,7 @@ const treasurePanel = ref<InstanceType<typeof PetTreasurePanel> | null>(null)
 const quantities = ref<Record<string, number>>({})
 const scrollViewport = ref<HTMLElement | null>(null)
 const walletMenu = ref<HTMLDetailsElement | null>(null)
-const logPanel = ref<HTMLDetailsElement | null>(null)
+const recordDialog = ref<HTMLDialogElement | null>(null)
 const giftPanel = ref<HTMLElement | null>(null)
 const exchangeDialog = ref<HTMLDialogElement | null>(null)
 const selectedGoodsId = ref('')
@@ -30,7 +30,10 @@ const selectedTermId = ref('')
 const clientNow = ref(Date.now())
 const offset = ref(0)
 const timer = window.setInterval(() => clientNow.value = Date.now(), 1000)
-onUnmounted(() => window.clearInterval(timer))
+onUnmounted(() => {
+  window.clearInterval(timer)
+  diary.clearNotice()
+})
 const now = computed(() => clientNow.value + offset.value)
 const busy = computed(() => !!pending.value || stale.value || !pet.value?.active)
 const tabs = [
@@ -41,6 +44,21 @@ const tabs = [
 ]
 const art = (file: string) => `/activity-assets/pet-diary/${file}.png`
 const growthPercent = computed(() => Math.min(100, (pet.value?.nurture.growth || 0) / (pet.value?.nurture.adultGrowth || 1) * 100))
+const feedHint = computed(() => {
+  const state = pet.value
+  if (!state?.active || !state.nurture.initialized || (state.nurture.adult && !state.nurture.dogGranted))
+    return ''
+  const count = state.nurture.adult ? state.hunt.count : state.nurture.feedCount
+  const limit = state.nurture.adult ? state.hunt.limit : state.nurture.feedLimit
+  if (count >= limit)
+    return state.nurture.adult ? '今日寻宝次数已用完' : '今日投喂次数已用完'
+  const costs = state.nurture.adult ? state.hunt.costs : state.nurture.feedCosts
+  if (costs.some(item => !state.balances.find(balance => balance.id === item.id)?.known))
+    return '请刷新确认元气糕余额'
+  if (costs.some(item => BigInt(state.balances.find(balance => balance.id === item.id)?.count || '0') < BigInt(item.count)))
+    return '元气糕不足，请先收获活动作物'
+  return ''
+})
 const unlocked = computed(() => pet.value?.stories.filter(s => s.unlocked).length || 0)
 const seedRewards = computed(() => pet.value?.seeds.days.find(d => d.claimable && !d.claimed)?.rewards || pet.value?.seeds.days[0]?.rewards || [])
 const claimableTreasures = computed(() => pet.value?.treasures.some(t => t.status === 3 || (t.status === 2 && t.endTime > 0 && t.endTime <= now.value)))
@@ -107,10 +125,9 @@ async function submitExchange() {
     exchangeDialog.value?.close()
 }
 async function showRecords() {
-  if (logPanel.value)
-    logPanel.value.open = true
+  diary.clearNotice()
   await nextTick()
-  logPanel.value?.scrollIntoView({ block: 'start' })
+  recordDialog.value?.showModal()
   await readLogs('interact')
 }
 function feedBalance(item: PetItem) {
@@ -145,6 +162,7 @@ async function readLogs(kind: 'interact' | 'plunder') {
 }
 watch(() => accountStore.currentAccountId, () => {
   exchangeDialog.value?.close()
+  recordDialog.value?.close()
   selectedGoodsId.value = ''
   selectedTermId.value = ''
   friendId.value = ''
@@ -153,6 +171,7 @@ watch(() => accountStore.currentAccountId, () => {
   void load()
 }, { immediate: true })
 watch(tab, () => {
+  diary.clearNotice()
   if (scrollViewport.value)
     scrollViewport.value.scrollTop = 0
   walletMenu.value?.removeAttribute('open')
@@ -253,11 +272,17 @@ watch(pet, (value) => {
                   <button v-else-if="!pet.nurture.adult" class="pet-feed-button" :disabled="busy || !pet.nurture.canFeed" @click="diary.operate('feed')">
                     {{ pending === 'feed' ? '投喂中…' : '投喂元气糕' }}
                   </button>
+                  <button v-else-if="!pet.nurture.dogGranted" class="pet-feed-button" :disabled="busy" @click="diary.operate('claimDog')">
+                    {{ pending === 'claimDog' ? '领取中…' : '领取永久比熊' }}
+                  </button>
                   <button v-else class="pet-feed-button" :disabled="busy || !pet.hunt.canDraw" @click="diary.operate('draw')">
-                    {{ pending === 'draw' ? '寻宝中…' : '派遣寻宝' }}
+                    {{ pending === 'draw' ? '投喂中…' : '投喂元气糕' }}
                   </button>
                   <p class="pet-care-note">
                     {{ pet.nurture.adult ? `今日寻宝 ${pet.hunt.count} / ${pet.hunt.limit}` : `今日投喂 ${pet.nurture.feedCount} / ${pet.nurture.feedLimit}` }}
+                  </p>
+                  <p v-if="feedHint" class="pet-care-note pet-care-note--warning">
+                    {{ feedHint }}
                   </p>
                 </div>
               </article>
@@ -282,7 +307,7 @@ watch(pet, (value) => {
                   </button>
                 </div>
                 <div class="pet-grow-tip">
-                  <strong>萌宠元气糕</strong><p>游记限定稀有作物的产出物，可用于投喂比熊和寻宝消耗。</p><p>经验种子和金币种子无法产出萌宠元气糕。</p><button class="pet-text-button" @click="router.push('/personal')">
+                  <strong>萌宠元气糕</strong><p>幼年期投喂元气糕提升成长值；成年后继续消耗元气糕互动寻宝，获得宝藏后会自动开始护送。</p><p>收获活动稀有作物可获得元气糕，经验种子和金币种子无法产出。</p><button class="pet-text-button" @click="router.push('/personal')">
                     前往农场种植 <span class="i-carbon-arrow-right" />
                   </button>
                 </div>
@@ -339,32 +364,13 @@ watch(pet, (value) => {
                   </article>
                 </div>
               </details>
-              <details ref="logPanel" class="pet-card">
-                <summary>互动记录与夺宝记录</summary><div class="pet-log-tabs">
-                  <button class="pet-button" :disabled="!!pending" @click="readLogs('interact')">
-                    互动记录
-                  </button><button class="pet-button" :disabled="!!pending" @click="readLogs('plunder')">
-                    被夺宝记录
-                  </button>
-                </div><p v-if="recordEntries === null">
-                  点击读取最新记录。
-                </p><p v-else-if="!recordEntries.length">
-                  暂无{{ logKind === 'interact' ? '互动' : '被夺宝' }}记录。
-                </p><div v-for="(entry, index) in recordEntries" :key="index" class="pet-log">
-                  <time>{{ time(entry.time) }}</time><template v-if="logKind === 'interact'">
-                    <span>消耗：{{ itemText(entry.costs) || '无' }}</span><strong>获得：{{ itemText(entry.rewards) || '无道具奖励' }}</strong>
-                  </template><template v-else>
-                    <span>{{ entry.name }} · {{ entry.won ? '夺宝成功' : '夺宝失败' }}{{ entry.fake ? ' · 锦囊记录' : '' }}</span><strong>损失 {{ itemText(entry.lost) || '无' }} · 注入 {{ itemText(entry.injected) || '无' }}</strong>
-                  </template>
-                </div>
-              </details>
             </div>
           </main>
           <main v-else-if="tab === 'stories'" class="pet-story-section" aria-label="爪印手记">
             <div class="pet-story-banner" aria-hidden="true">
               <picture>
                 <source :srcset="art('scene-stories')" media="(prefers-reduced-motion: reduce)">
-                <source srcset="/activity-assets/pet-diary/scene-stories.webp" type="image/webp">
+                <source srcset="/activity-assets/pet-diary/scene-stories.webp?v=20260910-hd" type="image/webp">
                 <img :src="art('scene-stories')" alt="" width="1020" height="460">
               </picture>
             </div>
@@ -390,7 +396,7 @@ watch(pet, (value) => {
             <div class="pet-shop-banner" aria-hidden="true">
               <picture>
                 <source :srcset="art('scene-shop')" media="(prefers-reduced-motion: reduce)">
-                <source srcset="/activity-assets/pet-diary/scene-shop.webp" type="image/webp">
+                <source srcset="/activity-assets/pet-diary/scene-shop.webp?v=20260910-hd" type="image/webp">
                 <img :src="art('scene-shop')" alt="" width="1020" height="450">
               </picture>
             </div>
@@ -448,7 +454,7 @@ watch(pet, (value) => {
               </div>
             </template>
           </main>
-          <details class="pet-card pet-rules">
+          <details v-if="tab === 'home'" class="pet-card pet-rules">
             <summary>活动说明</summary><p v-for="(rule, index) in pet.rules" :key="index">
               {{ rule }}
             </p>
@@ -498,6 +504,46 @@ watch(pet, (value) => {
         <button class="pet-button pet-button--primary pet-exchange-submit" :disabled="!canExchange" @click="submitExchange">
           {{ pending === 'exchange' ? '兑换中…' : '兑换' }}
         </button>
+      </div>
+    </dialog>
+    <dialog ref="recordDialog" class="pet-exchange-dialog pet-record-dialog" aria-labelledby="pet-record-title" @click.self="recordDialog?.close()">
+      <header>
+        <h2 id="pet-record-title">
+          互动记录
+        </h2>
+        <button class="pet-dialog-close" aria-label="关闭互动记录" @click="recordDialog?.close()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
+        </button>
+      </header>
+      <div class="pet-dialog-body">
+        <div class="pet-log-tabs" aria-label="记录类型">
+          <button class="pet-button" :class="{ 'pet-button--primary': logKind === 'interact' }" :disabled="!!pending" @click="readLogs('interact')">
+            互动记录
+          </button>
+          <button class="pet-button" :class="{ 'pet-button--primary': logKind === 'plunder' }" :disabled="!!pending" @click="readLogs('plunder')">
+            被夺宝记录
+          </button>
+        </div>
+        <p v-if="error" class="pet-message pet-message--error" role="alert">
+          {{ error }} <button :disabled="!!pending" @click="readLogs(logKind)">
+            重试
+          </button>
+        </p>
+        <p v-if="pending === 'interact' || pending === 'plunder'" class="pet-empty pet-empty--small" role="status">
+          正在读取记录…
+        </p>
+        <p v-else-if="!error && !recordEntries?.length" class="pet-empty pet-empty--small">
+          暂无{{ logKind === 'interact' ? '互动' : '被夺宝' }}记录。
+        </p>
+        <div v-for="(entry, index) in recordEntries" :key="index" class="pet-log">
+          <time>{{ time(entry.time) }}</time>
+          <template v-if="logKind === 'interact'">
+            <span>消耗：{{ itemText(entry.costs) || '无' }}</span><strong>获得：{{ itemText(entry.rewards) || '无道具奖励' }}</strong>
+          </template>
+          <template v-else>
+            <span>{{ entry.name }} · {{ entry.won ? '夺宝成功' : '夺宝失败' }}{{ entry.fake ? ' · 锦囊记录' : '' }}</span><strong>损失 {{ itemText(entry.lost) || '无' }} · 注入 {{ itemText(entry.injected) || '无' }}</strong>
+          </template>
+        </div>
       </div>
     </dialog>
     <PetTreasurePanel v-if="pet" ref="treasurePanel" :now="now" />
@@ -1048,6 +1094,12 @@ watch(pet, (value) => {
   color: #885c38;
   font-size: 11px;
 }
+.pet-care-note--warning {
+  max-width: 240px;
+  margin-inline: auto;
+  color: #99551e;
+  line-height: 1.4;
+}
 .pet-permanent {
   margin-top: 24px;
   color: var(--pet-muted);
@@ -1272,7 +1324,8 @@ watch(pet, (value) => {
 .pet-log-tabs {
   display: flex;
   gap: 12px;
-  margin-top: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
 }
 .pet-log {
   display: flex;
@@ -1717,6 +1770,21 @@ watch(pet, (value) => {
 }
 .pet-exchange-dialog::backdrop {
   background: #242c20a3;
+}
+.pet-record-dialog {
+  width: min(620px, calc(100vw - 40px));
+}
+.pet-record-dialog .pet-dialog-close {
+  padding: 0;
+}
+.pet-record-dialog .pet-dialog-close svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
 }
 .pet-exchange-dialog > header {
   position: relative;

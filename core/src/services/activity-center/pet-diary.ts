@@ -57,7 +57,7 @@ function createPetDiaryService(deps: any) {
     }
     async function readGroup() {
         const reply = await rpc('GetGroup', 'GetGroupRequest', 'PetDiaryGetGroupReply', { group_id: GROUP_ID });
-        if (str(reply.group?.head?.id) !== GROUP_ID) fail('服务端未返回萌宠日记活动');
+        if (str(reply.group?.head?.id) !== GROUP_ID) fail('服务端未返回萌宠成长日记活动');
         const children = list(reply.group.children);
         const pet = children.find(entry => str(entry.head?.id) === PET_ID);
         if (!pet?.pet_treasure_hunt) fail('服务端未返回萌宠养成状态');
@@ -187,7 +187,7 @@ function createPetDiaryService(deps: any) {
         const action = actionInput as Action;
         return serializeMutation(async () => {
             const group = await readGroup();
-            if (!isActive(group.pet.head)) fail('萌宠日记当前不在活动时间内');
+            if (!isActive(group.pet.head)) fail('萌宠成长日记当前不在活动时间内');
             const state = group.pet.pet_treasure_hunt; const nurture = state.nurture || {}; const battle = state.battle || {};
             let params: any = {}; let id = PET_ID;
             if (action === 'feed' || action === 'draw') {
@@ -259,7 +259,7 @@ function createPetDiaryService(deps: any) {
         const termId = positiveDecimal(termIdInput, 'INVALID_SOLAR_TERM', '节令编号');
         return serializeMutation(async () => {
             const group = await readGroup();
-            if (!isActive(group.pet.head)) fail('萌宠日记当前不在活动时间内');
+            if (!isActive(group.pet.head)) fail('萌宠成长日记当前不在活动时间内');
             const solar = await getCurrentSolarTerms();
             const term = list(solar.terms).find(t => t.id === termId
                 && Number(t.endTime) >= num(group.pet.head.start_time) && Number(t.startTime) <= num(group.pet.head.end_time));

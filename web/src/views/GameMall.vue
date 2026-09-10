@@ -29,7 +29,7 @@ const filters: Array<{ key: FilterKey, label: string }> = [
   { key: 'discount', label: '折扣' },
   { key: 'fertilizer', label: '化肥' },
   { key: 'pet', label: '狗粮' },
-  { key: 'activity', label: '萌宠日记' },
+  { key: 'activity', label: '萌宠成长日记' },
 ]
 
 const filteredGoods = computed(() => {

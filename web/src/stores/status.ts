@@ -2,8 +2,9 @@ import type { Socket } from 'socket.io-client'
 import { useStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { io } from 'socket.io-client'
-import { ref } from 'vue'
-import api from '@/api'
+import { ref, watch } from 'vue'
+import api, { getApiErrorMessage } from '@/api'
+import { useAccountStore } from '@/stores/account'
 
 // Define interfaces for better type checking
 interface DailyGift {
@@ -29,9 +30,12 @@ interface DailyGiftsResponse {
 }
 
 export const useStatusStore = defineStore('status', () => {
+  const accountStore = useAccountStore()
   const status = ref<any>(null)
   const logs = ref<any[]>([])
   const dailyGifts = ref<DailyGiftsResponse | null>(null)
+  const dailyGiftsLoading = ref(false)
+  const dailyGiftsError = ref('')
   const diamondBalance = ref(0)
   const loading = ref(false)
   const error = ref('')
@@ -43,6 +47,16 @@ export const useStatusStore = defineStore('status', () => {
   let socket: Socket | null = null
   let statusRequestSequence = 0
   let diamondRequestSequence = 0
+  let dailyGiftsSequence = 0
+  let pendingDailyGifts: Promise<void> | null = null
+
+  watch(() => accountStore.currentAccountId, () => {
+    dailyGiftsSequence++
+    pendingDailyGifts = null
+    dailyGifts.value = null
+    dailyGiftsLoading.value = false
+    dailyGiftsError.value = ''
+  }, { flush: 'sync' })
 
   function normalizeStatusPayload(input: any) {
     return (input && typeof input === 'object') ? { ...input } : {}
@@ -245,18 +259,41 @@ export const useStatusStore = defineStore('status', () => {
   }
 
   async function fetchDailyGifts(accountId: string) {
-    if (!accountId)
+    if (!accountId || accountId !== accountStore.currentAccountId)
       return
-    try {
-      const { data } = await api.get('/api/daily-gifts', {
-        headers: { 'x-account-id': accountId },
-      })
-      if (data.ok) {
-        dailyGifts.value = data.data
+    if (pendingDailyGifts)
+      return pendingDailyGifts
+
+    const sequence = ++dailyGiftsSequence
+    dailyGiftsLoading.value = true
+    dailyGiftsError.value = ''
+    const request = (async () => {
+      try {
+        const { data } = await api.get('/api/daily-gifts', {
+          headers: { 'x-account-id': accountId },
+          skipErrorToast: true,
+        } as any)
+        if (sequence !== dailyGiftsSequence || accountId !== accountStore.currentAccountId)
+          return
+        if (data.ok)
+          dailyGifts.value = data.data
+        else
+          dailyGiftsError.value = getApiErrorMessage(data, '获取任务失败')
       }
+      catch (e) {
+        if (sequence === dailyGiftsSequence)
+          dailyGiftsError.value = getApiErrorMessage(e, '获取任务失败')
+      }
+    })()
+    pendingDailyGifts = request
+    try {
+      await request
     }
-    catch (e) {
-      console.error('获取每日奖励失败', e)
+    finally {
+      if (pendingDailyGifts === request) {
+        pendingDailyGifts = null
+        dailyGiftsLoading.value = false
+      }
     }
   }
 
@@ -268,6 +305,8 @@ export const useStatusStore = defineStore('status', () => {
     status,
     logs,
     dailyGifts,
+    dailyGiftsLoading,
+    dailyGiftsError,
     diamondBalance,
     loading,
     error,

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { onScopeDispose, ref } from 'vue'
 import api, { getApiErrorMessage } from '@/api'
 
 export interface PetItem { id: string, name: string, image: string, count: string }
@@ -60,6 +60,14 @@ export const usePetDiaryStore = defineStore('pet-diary', () => {
   const plunderRecords = ref<PetRecord[] | null>(null)
   const friend = ref<PetFriend | null>(null)
   let generation = 0
+  let noticeTimer: ReturnType<typeof setTimeout> | undefined
+
+  function clearNotice() {
+    clearTimeout(noticeTimer)
+    noticeTimer = undefined
+    notice.value = ''
+  }
+  onScopeDispose(clearNotice)
 
   function selectAccount(id: string) {
     if (accountId.value === id)
@@ -72,7 +80,7 @@ export const usePetDiaryStore = defineStore('pet-diary', () => {
     friend.value = null
     pending.value = ''
     error.value = ''
-    notice.value = ''
+    clearNotice()
     stale.value = false
   }
   function options() {
@@ -114,13 +122,14 @@ export const usePetDiaryStore = defineStore('pet-diary', () => {
     const version = generation
     pending.value = action
     error.value = ''
-    notice.value = ''
+    clearNotice()
     try {
       const result = payload(await api.post('/api/activity-center/pet-diary/operate', { action, params }, options()))
       if (version !== generation)
         return
       const rewards = (result.rewards || []) as PetItem[]
-      notice.value = `${result.message || '领取成功'}${rewards.length ? ` · ${rewards.map(i => `${i.name} ×${i.count}`).join('、')}` : ''}`
+      notice.value = `${result.message || '操作成功'}${rewards.length ? ` · ${rewards.map(i => `${i.name} ×${i.count}`).join('、')}` : ''}`
+      noticeTimer = setTimeout(clearNotice, 4000)
       if (result.snapshot) {
         activity.value = result.snapshot
       }
@@ -175,5 +184,5 @@ export const usePetDiaryStore = defineStore('pet-diary', () => {
         pending.value = ''
     }
   }
-  return { activity, accountId, pending, error, notice, stale, records, plunderRecords, friend, selectAccount, load, operate, readExtra }
+  return { activity, accountId, pending, error, notice, stale, records, plunderRecords, friend, selectAccount, load, operate, readExtra, clearNotice }
 })

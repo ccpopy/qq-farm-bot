@@ -1,40 +1,41 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, watch } from 'vue'
+import { computed, watch } from 'vue'
 import DailyOverview from '@/components/DailyOverview.vue'
 import { useAccountStore } from '@/stores/account'
 import { useStatusStore } from '@/stores/status'
 
 const statusStore = useStatusStore()
 const accountStore = useAccountStore()
-const { status, dailyGifts, realtimeConnected } = storeToRefs(statusStore)
+const { status, dailyGifts, dailyGiftsLoading, dailyGiftsError, loading: statusLoading, realtimeConnected } = storeToRefs(statusStore)
 const { currentAccountId, currentAccount } = storeToRefs(accountStore)
 
 const growth = computed(() => dailyGifts.value?.growth || null)
 const growthCurrentTask = computed(() => growth.value?.currentTask || growth.value?.tasks?.[0] || null)
+const taskEmptyText = computed(() => {
+  if (!currentAccountId.value)
+    return '请登录账号后查看'
+  if (accountStore.loading || statusLoading.value)
+    return '正在加载账号状态…'
+  if (!status.value?.connection?.connected)
+    return '账号未登录，请先运行账号或检查网络连接'
+  if (dailyGiftsError.value)
+    return '任务加载失败，请重试'
+  return dailyGiftsLoading.value || !dailyGifts.value ? '正在加载任务…' : '暂无任务详情'
+})
 
 async function refresh() {
-  if (currentAccountId.value) {
-    const acc = currentAccount.value
-    if (!acc)
-      return
-
-    if (!realtimeConnected.value) {
-      await statusStore.fetchStatus(currentAccountId.value)
-    }
-    if (acc.running && status.value?.connection?.connected) {
-      statusStore.fetchDailyGifts(currentAccountId.value)
-    }
-  }
+  const id = currentAccountId.value
+  if (!id || !currentAccount.value?.running)
+    return
+  if (!realtimeConnected.value)
+    await statusStore.fetchStatus(id)
+  if (id === currentAccountId.value && currentAccount.value?.running && status.value?.connection?.connected)
+    await statusStore.fetchDailyGifts(id)
 }
 
-onMounted(() => {
-  refresh()
-})
-
-watch(currentAccountId, () => {
-  refresh()
-})
+// 账号列表和连接快照可能晚于面板挂载到达，就绪后自动补加载。
+watch([currentAccountId, () => currentAccount.value?.running, () => !!status.value?.connection?.connected], refresh, { immediate: true })
 
 function formatTaskProgress(task: any) {
   if (!task)
@@ -63,7 +64,13 @@ function formatTaskProgress(task: any) {
 <template>
   <div class="space-y-6">
     <!-- Daily Overview (Daily Gifts & Tasks) -->
-    <DailyOverview :daily-gifts="dailyGifts" />
+    <DailyOverview :daily-gifts="dailyGifts" :empty-text="taskEmptyText" />
+    <div v-if="dailyGiftsError" class="flex items-center justify-between gap-3 farm-card rounded-xl p-4 text-sm" role="alert">
+      <span>{{ dailyGiftsError }}</span>
+      <button class="shrink-0 text-green-600" :disabled="dailyGiftsLoading || !status?.connection?.connected" @click="refresh">
+        重新加载
+      </button>
+    </div>
 
     <!-- Growth Task -->
     <div class="flex flex-col farm-card rounded-xl p-4">
@@ -124,7 +131,7 @@ function formatTaskProgress(task: any) {
         </div>
       </div>
       <div v-else class="text-center text-sm text-gray-400">
-        暂无任务详情
+        {{ taskEmptyText }}
       </div>
     </div>
   </div>

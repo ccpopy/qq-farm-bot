@@ -63,6 +63,7 @@ function date(time: number) {
   return time ? new Date(time).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '尚未开始'
 }
 function open(section: 'home' | 'charms' = 'home') {
+  diary.clearNotice()
   view.value = section
   dialog.value?.showModal()
 }
@@ -81,18 +82,18 @@ defineExpose({ open })
 </script>
 
 <template>
-  <dialog ref="dialog" class="pet-escort" aria-label="宝藏护送">
+  <dialog ref="dialog" class="pet-escort" aria-label="宝藏护送" @close="diary.clearNotice()">
     <template v-if="pet">
       <header class="escort-header">
-        <button v-if="view !== 'home'" class="escort-round" aria-label="返回护送" @click="view = 'home'">
-          ←
+        <button v-if="view !== 'home'" class="escort-round escort-back" aria-label="返回护送" @click="view = 'home'">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5-7 7 7 7M3 12h18" /></svg>
         </button>
         <img v-if="view === 'home'" :src="art('img_s3Treasure_bg')" alt="宝藏护送" class="escort-title">
         <h2 v-else>
           {{ titles[view] }}
         </h2>
         <button class="escort-round escort-close" aria-label="关闭宝藏护送" @click="dialog?.close()">
-          ×
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
         </button>
       </header>
       <div class="escort-body">
@@ -308,12 +309,13 @@ defineExpose({ open })
   margin: 0;
 }
 .escort-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   min-height: 78px;
-  padding: 10px 58px 8px 16px;
+  padding: 10px 58px;
   background: #f3dfa6;
 }
 .escort-header h2 {
@@ -327,6 +329,9 @@ defineExpose({ open })
   object-fit: contain;
 }
 .escort-round {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   flex: none;
   display: grid;
   place-items: center;
@@ -337,12 +342,22 @@ defineExpose({ open })
   border-radius: 50%;
   color: #fff9e6;
   background: #e7b271;
-  font-size: 26px !important;
-  font-weight: 800 !important;
+  line-height: 1;
+}
+.escort-round svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.escort-back {
+  left: 13px;
 }
 .escort-close {
-  position: absolute;
-  top: 22px;
   right: 13px;
 }
 .escort-body {
@@ -815,9 +830,6 @@ defineExpose({ open })
   }
   .escort-title {
     height: 56px;
-  }
-  .escort-close {
-    top: 15px;
   }
   .escort-tools {
     gap: 5px;

@@ -4,7 +4,7 @@ import { useIntervalFn } from '@vueuse/core'
 import { NButton } from 'naive-ui/es/button'
 import { NInputNumber } from 'naive-ui/es/input-number'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { useAccountStore } from '@/stores/account'
 import { useBagStore } from '@/stores/bag'
@@ -632,19 +632,16 @@ function handleBatchActionClick() {
 }
 
 async function loadBag() {
-  if (!currentAccountId.value)
-    return false
-
-  const acc = currentAccount.value
-  if (!acc)
+  const id = currentAccountId.value
+  if (!id || !currentAccount.value?.running)
     return false
 
   try {
     if (!realtimeConnected.value)
-      await statusStore.fetchStatus(currentAccountId.value)
+      await statusStore.fetchStatus(id)
 
-    if (acc.running && status.value?.connection?.connected) {
-      const refreshed = await bagStore.fetchBag(currentAccountId.value)
+    if (id === currentAccountId.value && currentAccount.value?.running && status.value?.connection?.connected) {
+      const refreshed = await bagStore.fetchBag(id)
       if (refreshed)
         imageErrors.value = {}
       return refreshed
@@ -666,15 +663,13 @@ async function refreshPetSnapshotIfLoaded() {
   await petStore.fetchPetInfo(accountId)
 }
 
-onMounted(() => {
-  loadBag()
-})
-
 watch(currentAccountId, () => {
   batchAction.value = null
   selectedForBatch.value.clear()
-  loadBag()
 })
+
+// 账号列表和连接快照可能晚于面板挂载到达，就绪后自动补加载。
+watch([currentAccountId, () => currentAccount.value?.running, () => !!status.value?.connection?.connected], loadBag, { immediate: true })
 
 watch(selectedCategory, () => {
   batchAction.value = null

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   dailyGifts: any
+  emptyText?: string
 }>()
 
 const GIFT_ICONS: Record<string, string> = {
@@ -97,7 +98,7 @@ function formatGiftProgress(gift: any) {
         class="rounded-xl p-6 text-center text-sm"
         style="background: color-mix(in srgb, var(--theme-bg, #fff) 90%, var(--theme-primary, #3b82f6)); color: var(--theme-text, #6b7280); opacity: 0.7"
       >
-        请登录账号后查看
+        {{ emptyText || '请登录账号后查看' }}
       </div>
       <div
         v-else-if="!gifts.length"

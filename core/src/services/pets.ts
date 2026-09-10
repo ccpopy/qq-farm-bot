@@ -32,7 +32,7 @@ const PET_OBTAIN_CONDITIONS: Record<number, string> = {
     90003: '商店购买：200 点券',
     90011: '商店购买：200 点券',
     90021: '限时活动获得',
-    90031: '萌宠日记：将比熊幼崽培育至成年后永久获得',
+    90031: '萌宠成长日记：将比熊幼崽培育至成年后永久获得',
 };
 interface PetSkillDefinition {
     skillId?: number;

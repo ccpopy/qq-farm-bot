@@ -1369,7 +1369,7 @@
   {
     "path": "derived/pet-diary/spine/scene-shop",
     "file": "scene-shop.png",
-    "sha256": "35f69578b429506fe6090f4e570bee0ed924edc004f3e7ad7643328db1c1f5ae",
+    "sha256": "4176e4e40ee890f9ed8a57d8629c93799944c1cb48c4aac9045a648b46dbd6c5",
     "derived": {
       "method": "Official Spine mesh/bone rendering; no rectangular atlas reconstruction",
       "version": "3.8.99",
@@ -1394,8 +1394,8 @@
         "bytes": 1384692
       },
       "output": {
-        "width": 1020,
-        "height": 450,
+        "width": 2040,
+        "height": 900,
         "crop": {
           "x": -510,
           "y": -224,
@@ -1408,7 +1408,7 @@
   {
     "path": "derived/pet-diary/spine/scene-stories",
     "file": "scene-stories.png",
-    "sha256": "c525054117f34fa434a1389472e88872720b4e0705e709e97acce7d88225162c",
+    "sha256": "35905129155a18c9fe40311f92983076cbcbe0e29313fcc47d0f9ac6005dd558",
     "derived": {
       "method": "Official Spine mesh/bone rendering; no rectangular atlas reconstruction",
       "version": "3.8.99",
@@ -1433,8 +1433,8 @@
         "bytes": 2202262
       },
       "output": {
-        "width": 1020,
-        "height": 460,
+        "width": 2040,
+        "height": 920,
         "crop": {
           "x": -508,
           "y": -260,
@@ -1923,7 +1923,7 @@
   {
     "path": "derived/pet-diary/spine/scene-shop-animated",
     "file": "scene-shop.webp",
-    "sha256": "fb5c1c3ba57dd12c3e7aac3409f4a080c77ec7a23371dacf254a0b5037057c14",
+    "sha256": "4f7a629980a4628846955af62bd1cd094b73e1560d800a6cc3695cb3865c0852",
     "derived": {
       "method": "Official Spine mesh/bone rendering; no rectangular atlas reconstruction",
       "version": "3.8.99",
@@ -1947,8 +1947,8 @@
         "bytes": 1384692
       },
       "output": {
-        "width": 600,
-        "height": 265,
+        "width": 2040,
+        "height": 900,
         "crop": {
           "x": -510,
           "y": -224,
@@ -1960,7 +1960,7 @@
         "durationSeconds": 3,
         "sampleFps": 12,
         "sampleFrames": 36,
-        "encoding": "gifenc 1.0.3 + gif2webp -lossy -q 85 -m 6",
+        "encoding": "Direct RGBA PNG frames + img2webp 1.6.0 -sharp_yuv -lossy -q 95 -m 5; no GIF palette conversion",
         "loop": 0,
         "notes": "Official stepped curves retained; duplicate frames may be merged without changing timing"
       }
@@ -1969,7 +1969,7 @@
   {
     "path": "derived/pet-diary/spine/scene-stories-animated",
     "file": "scene-stories.webp",
-    "sha256": "6e908f5d73e4ec1dc875aeda5f4d00a28091e5f35678ee04d0ab6f2f7460aa33",
+    "sha256": "ac160294ca52a40f946d6e41713f8cba63bd10bdad35c95df0fce30ef901ee1e",
     "derived": {
       "method": "Official Spine mesh/bone rendering; no rectangular atlas reconstruction",
       "version": "3.8.99",
@@ -1993,8 +1993,8 @@
         "bytes": 2202262
       },
       "output": {
-        "width": 600,
-        "height": 271,
+        "width": 2040,
+        "height": 920,
         "crop": {
           "x": -508,
           "y": -260,
@@ -2006,7 +2006,7 @@
         "durationSeconds": 3,
         "sampleFps": 12,
         "sampleFrames": 36,
-        "encoding": "gifenc 1.0.3 + gif2webp -lossy -q 85 -m 6",
+        "encoding": "Direct RGBA PNG frames + img2webp 1.6.0 -sharp_yuv -lossy -q 95 -m 5; no GIF palette conversion",
         "loop": 0,
         "notes": "Official stepped curves retained; duplicate frames may be merged without changing timing"
       }
