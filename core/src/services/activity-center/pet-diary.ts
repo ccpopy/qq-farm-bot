@@ -86,6 +86,8 @@ function createPetDiaryService(deps: any) {
         return [...totals].every(([id, amount]) => BigInt(bag.get(id) || '0') >= amount);
     }
     const feedCosts = () => base.feed_items.split(';').map(value => { const [id, count] = value.split(':'); return { id, count }; });
+    const charmRefreshCost = () => ({ id: String(refresh.manual_refresh_cost_id), count: String(refresh.manual_refresh_cost_count) });
+    const charmNeedsChoice = (battle: any) => list(battle.charm_equipped).length > 0 && battle.charm_pick_used !== true;
     function treasureDto(value: any) {
         return {
             id: String(value.id), status: num(value.status), item: itemDto({ id: value.item_id, count: value.count }),
@@ -120,12 +122,16 @@ function createPetDiaryService(deps: any) {
         }).sort((a,b) => a.order - b.order);
         const growth = num(nurture.growth);
         const canClaimSeeds = availableSeeds.some(r => r.claimable === true && r.claimed !== true);
+        const freeRefreshRemaining = Math.max(0, refresh.free_refresh_daily_limit - num(battle.charm_free_refresh_count));
+        const paidRefreshCount = num(battle.charm_paid_refresh_count);
+        const paidRefreshRemaining = Math.max(0, refresh.manual_refresh_daily_limit - paidRefreshCount);
+        const canChooseCharm = active && adult && battle.charm_pick_used !== true && list(battle.charm_daily_pool).length > 0;
         return {
             activityId: PET_ID, groupId: GROUP_ID, title: '萌宠成长日记', active,
             startTime: num(group.pet.head.start_time) * 1000, endTime: num(group.pet.head.end_time) * 1000, serverTime: getServerTimeSec() * 1000,
             rules: textContent(group.pet.head.desc).paragraphs, warnings,
             treasureRules: textContent(JSON.stringify({ tips: json(group.pet.head.desc).tips2 || {} })).paragraphs,
-            balances: [1028,1029,80101,80102,80103].map(id => ({ ...itemDto({ id, count: bag?.get(String(id)) || '0' }), known: bag !== null })),
+            balances: [1028,1029,80101,80102,80103,1002].map(id => ({ ...itemDto({ id, count: bag?.get(String(id)) || '0' }), known: bag !== null })),
             nurture: { initialized: nurture.cg_played === true, adult, growth, adultGrowth: base.growth_adult_threshold, dogGranted: nurture.dog_granted === true,
                 feedCount: num(state.feed?.feed_count), feedLimit: base.daily_feed_limit, feedCosts: items(feedCosts()),
                 canFeed: active && !adult && num(nurture.stage) === 1 && num(state.feed?.feed_count) < base.daily_feed_limit && costsAvailable(feedCosts(), bag) },
@@ -137,9 +143,12 @@ function createPetDiaryService(deps: any) {
             stories: list(state.story?.stories).map(s => { const desc = json(s.selected_desc); return { order: num(s.order), unlocked: s.unlocked === true,
                 claimed: s.claimed === true, animated: s.animated === true, photo: localImage(desc.photo), captionImage: localImage(desc.say), caption: localImage(desc.say) ? '' : String(desc.say || '') }; }),
             charms: { pool: list(battle.charm_daily_pool).map(charmDto), equipped: list(battle.charm_equipped).map(charmDto), all: catalog.ActivityPetTreasureHuntCharm.map(c => charmDto(c.charm_id)),
-                picked: battle.charm_pick_used === true, freeRefreshRemaining: Math.max(0, refresh.free_refresh_daily_limit - num(battle.charm_free_refresh_count)),
-                canRefresh: active && adult && num(battle.charm_free_refresh_count) < refresh.free_refresh_daily_limit,
-                refreshNote: '只使用每日免费刷新。付费刷新可能自动改用钻石，暂不执行。' },
+                picked: battle.charm_pick_used === true, canChoose: canChooseCharm,
+                freeRefreshRemaining, freeRefreshLimit: refresh.free_refresh_daily_limit,
+                paidRefreshCount, paidRefreshRemaining, paidRefreshLimit: refresh.manual_refresh_daily_limit,
+                refreshCost: itemDto(charmRefreshCost()), refreshBalance: bag ? bag.get(String(refresh.manual_refresh_cost_id)) || '0' : null,
+                canRefresh: active && adult && !charmNeedsChoice(battle) && (freeRefreshRemaining > 0 || (paidRefreshRemaining > 0 && costsAvailable([charmRefreshCost()], bag))),
+                refreshNote: `每日免费 ${refresh.free_refresh_daily_limit} 次，之后每次 ${refresh.manual_refresh_cost_count} 点券，今日还可付费刷新 ${paidRefreshRemaining} 次。点券不足时不刷新。` },
             treasures: list(state.pool?.treasures).map(treasureDto), compensationCount: str(state.plunder?.plunder_compensation_count),
             battleCount: num(battle.battle_count), battleLimit: fight.daily_battle_limit, skipBattle: battle.is_skip_battle_cg === true,
             shop: goods, solarTerms: solar ? { ...solar, terms: list(solar.terms).filter(term => (
@@ -205,12 +214,27 @@ function createPetDiaryService(deps: any) {
                 if (!isActive(group.seeds?.head) || !list(group.seeds?.mega_event?.rewards).some(r => r.claimable && !r.claimed)) fail('当前没有可领取的种子礼包');
                 id = SEEDS_ID;
             } else if (action === 'refreshCharm') {
-                // The official empty request has no payment selector or spending cap.
-                // Even a sufficient ticket balance cannot safely exclude a diamond fallback.
-                if (num(battle.charm_free_refresh_count) >= refresh.free_refresh_daily_limit) fail('免费刷新已用完；为避免自动消耗钻石，已停用付费刷新');
+                if (num(nurture.stage) !== 2) fail('比熊成年后才可刷新锦囊');
+                if (charmNeedsChoice(battle)) fail('请先替换或保留当前锦囊，再刷新');
+                const free = num(battle.charm_free_refresh_count) < refresh.free_refresh_daily_limit;
+                // Payment/counter are panel preconditions, not fields in the game's empty request.
+                // A stale free click must never turn into paid refresh, nor may a repeated paid click spend twice.
+                if (input?.allowDiamonds || (input?.payment && !['free', 'tickets'].includes(input.payment))) fail('锦囊刷新不支持使用钻石');
+                if (free) {
+                    if (input?.payment && input.payment !== 'free') fail('刷新次数已变化，请刷新状态后重试');
+                } else {
+                    if (input?.payment !== 'tickets') fail('免费刷新已用完，请确认点券费用后再操作');
+                    const paidCount = num(battle.charm_paid_refresh_count);
+                    if (paidCount >= refresh.manual_refresh_daily_limit) fail('今日付费刷新次数已用完');
+                    if (!Number.isSafeInteger(input?.expectedPaidRefreshCount) || input.expectedPaidRefreshCount !== paidCount) fail('刷新次数已变化，请刷新状态后重试');
+                    // Live command 41 deducts 1002 x30. Re-read tickets immediately before sending;
+                    // the official client falls back to diamonds when tickets are insufficient.
+                    if (!costsAvailable([charmRefreshCost()], await balances())) fail('点券不足，已停止刷新，不使用钻石');
+                }
             } else if (action === 'equipCharm') {
                 const charmId = Number(positiveDecimal(input?.charmId, 'INVALID_CHARM', '锦囊编号'));
-                if (battle.charm_pick_used || !list(battle.charm_daily_pool).includes(charmId)) fail('该锦囊不可选择或今日已经选择');
+                const choices = [...list(battle.charm_daily_pool), ...list(battle.charm_equipped)].map(Number);
+                if (num(nurture.stage) !== 2 || battle.charm_pick_used || !choices.includes(charmId)) fail('该锦囊不可选择或本轮已经选择');
                 params = { charm_ids: [charmId] };
             } else if (action === 'openTreasure') {
                 if (!list(state.pool?.treasures).some(t => num(t.status) === 3 || (num(t.status) === 2 && num(t.end_at) > 0 && num(t.end_at) <= getServerTimeSec()))) fail('还没有完成护送的宝藏');

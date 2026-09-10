@@ -12,6 +12,7 @@ const object = (type, input) => type.toObject(type.decode(input), { longs: Strin
 const encode = (type, input) => Buffer.from(type.encode(type.fromObject(input)).finish());
 const capture = name => fixtures.find(f => f.file === name);
 const decoded = name => types.PetDiaryOperateReply.decode(Buffer.from(capture(name).hex,'hex'));
+const charmCaptures = require('./fixtures/pet-charm-refresh-capture.json');
 
 test('pet requests match the official mini-program bytes', () => {
     for (const fixture of fixtures.filter(f => f.direction === 'send')) {
@@ -40,13 +41,13 @@ test('late-stage operations match independent official encoder vectors', () => {
     }
 });
 
-function harness({ cake = '0', stars = '450', failSnapshot = false, solarClaimable = false, petCapture = '000157-recv.bin', feedReply = '', storyReply = '' } = {}) {
+function harness({ cake = '0', stars = '450', tickets = '0', failBag = false, failSnapshot = false, solarClaimable = false, petCapture = '000157-recv.bin', feedReply = '', storyReply = '', refreshReply = '', equipReply = '' } = {}) {
     const group = { pet: decoded(petCapture).data, seeds: decoded('000276-recv.bin').data, shop: decoded('000318-recv.bin').data };
     const calls = [];
     let mutationCount = 0; let tail = Promise.resolve();
     const service = createPetDiaryService({
         types, getServerTimeSec: () => 1789010000,
-        getBag: async () => [{id:'1028',count:cake},{id:'1029',count:stars}], getBagItems: x => x,
+        getBag: async () => { if (failBag) throw new Error('bag unavailable'); return [{id:'1028',count:cake},{id:'1029',count:stars},{id:'1002',count:tickets}]; }, getBagItems: x => x,
         int64String: x => String(x ?? '0'), int64Number: x => Number(x || 0),
         itemDto: x => ({id:String(x?.id || x?.item_id || '0'),count:String(x?.count || '0'),name:'item',image:''}),
         textContent: () => ({paragraphs:[]}), getCurrentSolarTerms: async () => ({terms:[{id:'301',startTime:'1789005600',endTime:'1790179199',canClaim:solarClaimable}]}),
@@ -78,6 +79,33 @@ function harness({ cake = '0', stars = '450', failSnapshot = false, solarClaimab
             if (req.operate_type === '32' && storyReply) {
                 group.pet = decoded(storyReply).data;
                 return { body: Buffer.from(capture(storyReply).hex,'hex') };
+            }
+            if (req.operate_type === '41' || req.operate_type === '42') {
+                const captured = charmCaptures.find(f => f.file === (req.operate_type === '41' ? refreshReply : equipReply));
+                if (captured) {
+                    const reply = types.PetDiaryOperateReply.decode(Buffer.from(captured.hex,'hex'));
+                    group.pet = reply.data;
+                    for (const cost of reply.pet_treasure_hunt_refresh_charm_pool?.costs || []) {
+                        assert.equal(String(cost.id),'1002');
+                        tickets = (BigInt(tickets) - BigInt(String(cost.count))).toString();
+                    }
+                    return { body: Buffer.from(captured.hex,'hex') };
+                }
+                const battle = group.pet.pet_treasure_hunt.battle;
+                let result;
+                if (req.operate_type === '41') {
+                    const free = Number(battle.charm_free_refresh_count) < 1;
+                    if (free) battle.charm_free_refresh_count = 1;
+                    else { battle.charm_paid_refresh_count = Number(battle.charm_paid_refresh_count) + 1; tickets = (BigInt(tickets) - 30n).toString(); }
+                    battle.charm_daily_pool = [101,105];
+                    battle.charm_pick_used = false;
+                    result = { charm_daily_pool:battle.charm_daily_pool, free_refresh:free, free_refresh_count:battle.charm_free_refresh_count, paid_refresh_count:battle.charm_paid_refresh_count, costs:free ? [] : [{id:1002,count:30}] };
+                } else {
+                    battle.charm_equipped = req[selector].charm_ids;
+                    battle.charm_pick_used = true;
+                    result = {charm_equipped:battle.charm_equipped};
+                }
+                return {body:encode(types.PetDiaryOperateReply,{activity_id:req.activity_id,operate_type:req.operate_type,[selector]:result})};
             }
             if (req.operate_type === '29') { cake='0'; group.pet.pet_treasure_hunt.nurture.growth = 700; }
             return {body:encode(types.PetDiaryOperateReply,{activity_id:req.activity_id,operate_type:req.operate_type,[selector]:{}})};
@@ -138,10 +166,98 @@ test('user-triggered live story claim capture provides the gift and prevents dup
     assert.equal(h.mutations(),1);
 });
 
-test('paid charm refresh stays blocked even if a caller supplies diamond overrides', async () => {
-    const h=harness();h.group.pet.pet_treasure_hunt.battle.charm_free_refresh_count=1;
-    await assert.rejects(h.service.operatePetDiary('refreshCharm',{allowDiamonds:true}),/钻石/);
+function refreshHarness(options = {}) {
+    const h = harness(options);
+    h.group.pet.pet_treasure_hunt.nurture.stage = 2;
+    Object.assign(h.group.pet.pet_treasure_hunt.battle, {charm_equipped:[102],charm_daily_pool:[101,105],charm_pick_used:true,charm_free_refresh_count:1,charm_paid_refresh_count:0});
+    return h;
+}
+const ticketRefresh = {payment:'tickets',expectedPaidRefreshCount:0};
+
+test('live paid refresh and keep-current messages match every field of the independent official decoder', () => {
+    for (const fixture of charmCaptures) {
+        const type = fixture.direction === 'send' ? types.PetDiaryOperateRequest : types.PetDiaryOperateReply;
+        const bytes = Buffer.from(fixture.hex,'hex');
+        assert.deepEqual(object(type,bytes),fixture.expected,fixture.file);
+        assert.deepEqual(encode(type,fixture.expected),bytes,fixture.file);
+    }
+});
+
+test('live paid refresh deducts 30 tickets, offers two new charms and keeps the current charm until chosen', async () => {
+    const h = refreshHarness({tickets:'11915',refreshReply:'000469-recv.bin',equipReply:'000474-recv.bin'});
+    const result = await h.service.operatePetDiary('refreshCharm',ticketRefresh);
+    assert.deepEqual(result.costs.map(i => [i.id,i.count]),[['1002','30']]);
+    assert.equal(result.snapshot.charms.refreshBalance,'11885');
+    assert.equal(result.snapshot.charms.paidRefreshCount,1);
+    assert.equal(result.snapshot.charms.paidRefreshRemaining,2);
+    assert.equal(result.snapshot.charms.refreshCost.count,'30');
+    assert.deepEqual(result.snapshot.charms.pool.map(c=>c.id),[101,105]);
+    assert.deepEqual(result.snapshot.charms.equipped.map(c=>c.id),[102]);
+    assert.equal(result.snapshot.charms.canChoose,true);
+    assert.equal(result.snapshot.charms.canRefresh,false);
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',{payment:'tickets',expectedPaidRefreshCount:1}),/先替换或保留/);
+    const kept = await h.service.operatePetDiary('equipCharm',{charmId:102});
+    assert.deepEqual(kept.snapshot.charms.equipped.map(c=>c.id),[102]);
+    assert.equal(kept.snapshot.charms.canRefresh,true);
+    assert.equal(kept.snapshot.charms.canChoose,false);
+    assert.equal(kept.snapshot.charms.refreshBalance,'11885');
+    await assert.rejects(h.service.operatePetDiary('equipCharm',{charmId:101}),/本轮已经选择/);
+    assert.equal(h.mutations(),2);
+});
+
+test('free clicks, insufficient or unavailable tickets and diamond overrides never trigger a paid operation', async () => {
+    for (const options of [{tickets:'29'},{tickets:'0'},{tickets:'100',failBag:true}]) {
+        const h = refreshHarness(options);
+        const dto = await h.service.getPetDiary();
+        assert.equal(dto.charms.canRefresh,false);
+        if (options.failBag) assert.equal(dto.charms.refreshBalance,null);
+        await assert.rejects(h.service.operatePetDiary('refreshCharm',ticketRefresh));
+        assert.equal(h.mutations(),0);
+    }
+    const h = refreshHarness({tickets:'100'});
+    await assert.rejects(h.service.operatePetDiary('refreshCharm'),/免费刷新已用完/);
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',{payment:'free'}),/免费刷新已用完/);
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',{...ticketRefresh,allowDiamonds:true}),/不支持使用钻石/);
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',{payment:'diamonds'}),/不支持使用钻石/);
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',{payment:'tickets'}),/次数已变化/);
     assert.equal(h.mutations(),0);
+});
+
+test('serialized refresh clicks cannot spend twice and a stale paid counter cannot be reused after choosing', async () => {
+    const h = refreshHarness({tickets:'30'});
+    const results = await Promise.allSettled([h.service.operatePetDiary('refreshCharm',ticketRefresh),h.service.operatePetDiary('refreshCharm',ticketRefresh)]);
+    assert.deepEqual(results.map(r=>r.status),['fulfilled','rejected']);
+    assert.equal(results[0].value.snapshot.charms.refreshBalance,'0');
+    await h.service.operatePetDiary('equipCharm',{charmId:101});
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',ticketRefresh),/次数已变化/);
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',{payment:'tickets',expectedPaidRefreshCount:1}),/点券不足/);
+    assert.equal(h.mutations(),2);
+});
+
+test('refresh limits, adulthood and retaining remaining charm effects are validated on the latest state', async () => {
+    const h = refreshHarness({tickets:'100'});
+    const state = h.group.pet.pet_treasure_hunt;
+    state.nurture.stage = 1;
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',ticketRefresh),/成年/);
+    state.nurture.stage = 2;
+    state.battle.charm_free_refresh_count = 0;
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',ticketRefresh),/次数已变化/);
+    const free = await h.service.operatePetDiary('refreshCharm',{payment:'free'});
+    assert.deepEqual(free.costs,[]);
+    assert.equal(free.snapshot.charms.refreshBalance,'100');
+    state.battle.charm_equipped = [105];
+    state.battle.charm_daily_pool = [101,104];
+    state.battle.charm_effect_remaining_count = [{charm_id:105,effect_order:1,remaining_count:1}];
+    await assert.rejects(h.service.operatePetDiary('equipCharm',{charmId:103}),/不可选择/);
+    const keep = await h.service.operatePetDiary('equipCharm',{charmId:105});
+    assert.deepEqual(keep.snapshot.charms.equipped[0].remaining,[1]);
+    state.battle.charm_paid_refresh_count = 2;
+    const last = await h.service.operatePetDiary('refreshCharm',{payment:'tickets',expectedPaidRefreshCount:2});
+    assert.equal(last.snapshot.charms.paidRefreshRemaining,0);
+    assert.equal(last.snapshot.charms.refreshCost.count,'30');
+    await h.service.operatePetDiary('equipCharm',{charmId:105});
+    await assert.rejects(h.service.operatePetDiary('refreshCharm',{payment:'tickets',expectedPaidRefreshCount:3}),/次数已用完/);
+    assert.equal((await h.service.getPetDiary()).charms.canRefresh,false);
 });
 
 test('a successful action remains successful when its follow-up snapshot fails', async () => {

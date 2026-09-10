@@ -429,7 +429,11 @@ watch(pet, (value) => {
             <template v-else>
               <div class="pet-solar-scene" :class="{ 'pet-solar-scene--bailu': currentTerm.name.includes('白露') }">
                 <template v-if="currentTerm.name.includes('白露')">
-                  <img class="pet-solar-landscape" :src="art('scene-bailu')" alt="白露节气，小童在芦苇水塘中用荷叶接露水">
+                  <picture>
+                    <source :srcset="art('scene-bailu')" media="(prefers-reduced-motion: reduce)">
+                    <source srcset="/activity-assets/pet-diary/scene-bailu.webp?v=20260910-motion" type="image/webp">
+                    <img class="pet-solar-landscape" :src="art('scene-bailu')" alt="白露节气，小童在芦苇水塘中用荷叶接露水">
+                  </picture>
                   <div class="pet-solar-lettering">
                     <img :src="art('img_S3Jieqi_title_bailu_trim')" alt="白露"><img :src="art('img_S3Jieqi_txt_bailu_trim')" alt="白露节令题诗">
                   </div>
@@ -1592,6 +1596,7 @@ watch(pet, (value) => {
   object-fit: contain;
 }
 .pet-solar-landscape {
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;

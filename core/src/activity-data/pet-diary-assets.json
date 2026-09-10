@@ -2011,5 +2011,839 @@
         "notes": "Official stepped curves retained; duplicate frames may be merged without changing timing"
       }
     }
+  },
+  {
+    "path": "derived/pet-diary/spine/scene-bailu-animated",
+    "file": "scene-bailu.webp",
+    "derived": {
+      "method": "Official Spine mesh/bone rendering; no rectangular atlas reconstruction",
+      "version": "3.8.99",
+      "renderer": "pixi.js 7.4.3 + @pixi-spine/runtime-3.8 4.0.6",
+      "animation": "loop",
+      "timeSeconds": 0.7,
+      "skin": "default",
+      "skeleton": {
+        "file": "bailu.skel",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/extraRes/native/db/db837d36-678a-478e-a34c-fbe775e7338f.30c3a.bin",
+        "sha256": "815e3537db2760eb02d68009e06cd10fb4b2c889d5ebf6be616e9793c0b84671"
+      },
+      "atlas": {
+        "file": "bailu.atlas",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/extraRes/import/db/db837d36-678a-478e-a34c-fbe775e7338f.42f64.json",
+        "sha256": "37a55192ad3d855f03d5b83a005cc4883aa26f12c35457b622bc3d5f8559b36d"
+      },
+      "texture": {
+        "file": "bailu.png",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/extraRes/native/90/902f4ec8-5cd7-440a-8d52-065b5c0667e6.3aba0.png",
+        "sha256": "dba98e1d906f84f7ab1b0bbe0242ee32d1e14f58d80da09ba623f4fef7214dae",
+        "bytes": 2943599
+      },
+      "output": {
+        "width": 900,
+        "height": 1604,
+        "crop": {
+          "x": -448,
+          "y": -799,
+          "width": 896,
+          "height": 1596
+        }
+      },
+      "animationExport": {
+        "durationSeconds": 6.666666666666667,
+        "sampleFps": 12,
+        "sampleFrames": 80,
+        "loop": 0,
+        "encoding": "Direct RGBA PNG frames + img2webp 1.6.0 -min_size -sharp_yuv -lossy -q 85 -m 6",
+        "notes": "Fixed crop matches the existing static scene; official loop retained."
+      }
+    },
+    "sha256": "2523827e1611d073ce1b020a0c7fed17f8e21e24c17332bbb6311a1026875c2e"
+  },
+  {
+    "path": "derived/pet-diary/escort/dog-walk-static",
+    "file": "escort-dog-walk.png",
+    "derived": {
+      "method": "Official Cocos sprites centered on transparent 128x132 frames with explicit pixel source/destination rectangles, independent of PNG DPI",
+      "sources": [
+        {
+          "file": "img_s3pkSkin0_walk_00.png",
+          "path": "gui/texture/Season/S3/S3PetSkin/img_s3pkSkin0_walk_00",
+          "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/4f/4fa85947-cb23-49f7-b1e0-074e7c536813.45906.png",
+          "sha256": "49ae3507b0084f9147c663bb6dbe2ef738f57e9bee8f1bdb2e7c03085337987a",
+          "sprite": {
+            "name": "img_s3pkSkin0_walk_00",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 123,
+              "height": 126
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "originalSize": {
+              "width": 123,
+              "height": 126
+            },
+            "rotated": false,
+            "capInsets": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "vertices": {
+              "rawPosition": [
+                -61.5,
+                -63,
+                0,
+                61.5,
+                -63,
+                0,
+                -61.5,
+                63,
+                0,
+                61.5,
+                63,
+                0
+              ],
+              "indexes": [
+                0,
+                1,
+                2,
+                2,
+                1,
+                3
+              ],
+              "uv": [
+                0,
+                126,
+                123,
+                126,
+                0,
+                0,
+                123,
+                0
+              ],
+              "nuv": [
+                0,
+                0,
+                1,
+                0,
+                0,
+                1,
+                1,
+                1
+              ],
+              "minPos": {
+                "x": -61.5,
+                "y": -63,
+                "z": 0
+              },
+              "maxPos": {
+                "x": 61.5,
+                "y": 63,
+                "z": 0
+              }
+            },
+            "packable": true,
+            "pixelsToUnit": 100,
+            "pivot": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "meshType": 0
+          }
+        }
+      ],
+      "output": {
+        "width": 128,
+        "height": 132
+      }
+    },
+    "sha256": "f677a06172c58a7511351688e53fcbf596c8112a84583d7cc25b14330a923073"
+  },
+  {
+    "path": "derived/pet-diary/escort/dog-walk-animated",
+    "file": "escort-dog-walk.webp",
+    "derived": {
+      "method": "Official Cocos sprites centered on transparent 128x132 frames with explicit pixel source/destination rectangles, independent of PNG DPI",
+      "sources": [
+        {
+          "file": "img_s3pkSkin0_walk_00.png",
+          "path": "gui/texture/Season/S3/S3PetSkin/img_s3pkSkin0_walk_00",
+          "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/4f/4fa85947-cb23-49f7-b1e0-074e7c536813.45906.png",
+          "sha256": "49ae3507b0084f9147c663bb6dbe2ef738f57e9bee8f1bdb2e7c03085337987a",
+          "sprite": {
+            "name": "img_s3pkSkin0_walk_00",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 123,
+              "height": 126
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "originalSize": {
+              "width": 123,
+              "height": 126
+            },
+            "rotated": false,
+            "capInsets": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "vertices": {
+              "rawPosition": [
+                -61.5,
+                -63,
+                0,
+                61.5,
+                -63,
+                0,
+                -61.5,
+                63,
+                0,
+                61.5,
+                63,
+                0
+              ],
+              "indexes": [
+                0,
+                1,
+                2,
+                2,
+                1,
+                3
+              ],
+              "uv": [
+                0,
+                126,
+                123,
+                126,
+                0,
+                0,
+                123,
+                0
+              ],
+              "nuv": [
+                0,
+                0,
+                1,
+                0,
+                0,
+                1,
+                1,
+                1
+              ],
+              "minPos": {
+                "x": -61.5,
+                "y": -63,
+                "z": 0
+              },
+              "maxPos": {
+                "x": 61.5,
+                "y": 63,
+                "z": 0
+              }
+            },
+            "packable": true,
+            "pixelsToUnit": 100,
+            "pivot": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "meshType": 0
+          }
+        },
+        {
+          "file": "img_s3pkSkin0_walk_01.png",
+          "path": "gui/texture/Season/S3/S3PetSkin/img_s3pkSkin0_walk_01",
+          "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/e7/e73c2334-06ec-4c07-9c76-dcf33a221aac.0a178.png",
+          "sha256": "b322df548ea27c62cc430c73c4c0fa48819ce36059b549fa2fc06b3d743a97e3",
+          "sprite": {
+            "name": "img_s3pkSkin0_walk_01",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 124,
+              "height": 127
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "originalSize": {
+              "width": 124,
+              "height": 127
+            },
+            "rotated": false,
+            "capInsets": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "vertices": {
+              "rawPosition": [
+                -62,
+                -63.5,
+                0,
+                62,
+                -63.5,
+                0,
+                -62,
+                63.5,
+                0,
+                62,
+                63.5,
+                0
+              ],
+              "indexes": [
+                0,
+                1,
+                2,
+                2,
+                1,
+                3
+              ],
+              "uv": [
+                0,
+                127,
+                124,
+                127,
+                0,
+                0,
+                124,
+                0
+              ],
+              "nuv": [
+                0,
+                0,
+                1,
+                0,
+                0,
+                1,
+                1,
+                1
+              ],
+              "minPos": {
+                "x": -62,
+                "y": -63.5,
+                "z": 0
+              },
+              "maxPos": {
+                "x": 62,
+                "y": 63.5,
+                "z": 0
+              }
+            },
+            "packable": true,
+            "pixelsToUnit": 100,
+            "pivot": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "meshType": 0
+          }
+        },
+        {
+          "file": "img_s3pkSkin0_walk_02.png",
+          "path": "gui/texture/Season/S3/S3PetSkin/img_s3pkSkin0_walk_02",
+          "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/d5/d5ed13d7-5f2e-4eb7-80ed-a1c03da3ca07.bbf36.png",
+          "sha256": "3f7735d9da5e91be1341ab23a5bef3a51a83f536fb83abb978fcda172bc23373",
+          "sprite": {
+            "name": "img_s3pkSkin0_walk_02",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 122,
+              "height": 125
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "originalSize": {
+              "width": 122,
+              "height": 125
+            },
+            "rotated": false,
+            "capInsets": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "vertices": {
+              "rawPosition": [
+                -61,
+                -62.5,
+                0,
+                61,
+                -62.5,
+                0,
+                -61,
+                62.5,
+                0,
+                61,
+                62.5,
+                0
+              ],
+              "indexes": [
+                0,
+                1,
+                2,
+                2,
+                1,
+                3
+              ],
+              "uv": [
+                0,
+                125,
+                122,
+                125,
+                0,
+                0,
+                122,
+                0
+              ],
+              "nuv": [
+                0,
+                0,
+                1,
+                0,
+                0,
+                1,
+                1,
+                1
+              ],
+              "minPos": {
+                "x": -61,
+                "y": -62.5,
+                "z": 0
+              },
+              "maxPos": {
+                "x": 61,
+                "y": 62.5,
+                "z": 0
+              }
+            },
+            "packable": true,
+            "pixelsToUnit": 100,
+            "pivot": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "meshType": 0
+          }
+        },
+        {
+          "file": "img_s3pkSkin0_walk_03.png",
+          "path": "gui/texture/Season/S3/S3PetSkin/img_s3pkSkin0_walk_03",
+          "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/26/26a0d601-51ad-443f-9051-2c4eff9aa04a.248a9.png",
+          "sha256": "7b8f33c3a8a83aba594b7952fa8f8dc0aeda5708a6d2947e3dc470a1d8785029",
+          "sprite": {
+            "name": "img_s3pkSkin0_walk_03",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "width": 120,
+              "height": 128
+            },
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "originalSize": {
+              "width": 120,
+              "height": 128
+            },
+            "rotated": false,
+            "capInsets": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "vertices": {
+              "rawPosition": [
+                -60,
+                -64,
+                0,
+                60,
+                -64,
+                0,
+                -60,
+                64,
+                0,
+                60,
+                64,
+                0
+              ],
+              "indexes": [
+                0,
+                1,
+                2,
+                2,
+                1,
+                3
+              ],
+              "uv": [
+                0,
+                128,
+                120,
+                128,
+                0,
+                0,
+                120,
+                0
+              ],
+              "nuv": [
+                0,
+                0,
+                1,
+                0,
+                0,
+                1,
+                1,
+                1
+              ],
+              "minPos": {
+                "x": -60,
+                "y": -64,
+                "z": 0
+              },
+              "maxPos": {
+                "x": 60,
+                "y": 64,
+                "z": 0
+              }
+            },
+            "packable": true,
+            "pixelsToUnit": 100,
+            "pivot": {
+              "x": 0.5,
+              "y": 0.5
+            },
+            "meshType": 0
+          }
+        }
+      ],
+      "sourceClip": {
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/import/d0/d01c3b3b-0ded-490b-a2ca-137f7b36ad8e.f436f.json",
+        "binaryUrl": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/import/d0/d01c3b3b-0ded-490b-a2ca-137f7b36ad8e.f436f.bin",
+        "binarySha256": "d9e6406327fc1cb32984404d092fad9ed9b6b756a38fb1bfbf0d281ff736d16d",
+        "name": "ui_anim_move_base",
+        "durationSeconds": 0.8166666666666667
+      },
+      "output": {
+        "width": 128,
+        "height": 132
+      },
+      "animationExport": {
+        "frameDurationsMs": [
+          200,
+          200,
+          200,
+          217
+        ],
+        "durationSeconds": 0.817,
+        "loop": 0,
+        "encoding": "img2webp 1.6.0 -lossless -m 6"
+      }
+    },
+    "sha256": "7b9b7979c69686e93b312ab04f2a0ae6eca9979fce4678e6c4490672a445d13c"
+  },
+  {
+    "file": "escort-dog-idle.png",
+    "path": "gui/texture/Season/S3/S3PetSkin/img_s3pkSkin0_idle_00",
+    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/0d/0d6ae407-e96c-4132-a19f-e3d5b15ab998.e035f.png",
+    "sha256": "07b1426fcb8e400879e5a62a2b44abb19af62441b5580b669463eb09809285b2",
+    "sprite": {
+      "name": "img_s3pkSkin0_idle_00",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 102,
+        "height": 129
+      },
+      "offset": {
+        "x": 0,
+        "y": 0
+      },
+      "originalSize": {
+        "width": 102,
+        "height": 129
+      },
+      "rotated": false,
+      "capInsets": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "vertices": {
+        "rawPosition": [
+          -51,
+          -64.5,
+          0,
+          51,
+          -64.5,
+          0,
+          -51,
+          64.5,
+          0,
+          51,
+          64.5,
+          0
+        ],
+        "indexes": [
+          0,
+          1,
+          2,
+          2,
+          1,
+          3
+        ],
+        "uv": [
+          0,
+          129,
+          102,
+          129,
+          0,
+          0,
+          102,
+          0
+        ],
+        "nuv": [
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "minPos": {
+          "x": -51,
+          "y": -64.5,
+          "z": 0
+        },
+        "maxPos": {
+          "x": 51,
+          "y": 64.5,
+          "z": 0
+        }
+      },
+      "packable": true,
+      "pixelsToUnit": 100,
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "meshType": 0
+    }
+  },
+  {
+    "path": "derived/pet-diary/escort/wheel-animated",
+    "file": "escort-wheel.webp",
+    "derived": {
+      "method": "Official two wheel sprites in their Cocos clip sequence",
+      "sources": [
+        {
+          "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_a8",
+          "file": "img_s3Treasure_a8.png",
+          "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/13/13ac35c8f.17cfd.png",
+          "sha256": "2deb81297f4077f00f7f1e899abdcb3dc936567f53aacc40e43a6d5a8494b2e0",
+          "atlasSha256": "60cf56306886df756ec95adf99d89481859f96886dd2a8a67b4bf2582c97bade",
+          "rect": {
+            "x": 448,
+            "y": 150,
+            "width": 31,
+            "height": 36
+          },
+          "rotated": false,
+          "originalSize": {
+            "width": 31,
+            "height": 36
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_a9",
+          "file": "img_s3Treasure_a9.png",
+          "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/13/13ac35c8f.17cfd.png",
+          "sha256": "301ded3c0c24e76b0c428c7be1e12ee777e510746106f6cbcbd18b765d675fb6",
+          "atlasSha256": "60cf56306886df756ec95adf99d89481859f96886dd2a8a67b4bf2582c97bade",
+          "rect": {
+            "x": 448,
+            "y": 192,
+            "width": 31,
+            "height": 36
+          },
+          "rotated": false,
+          "originalSize": {
+            "width": 31,
+            "height": 36
+          },
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      ],
+      "sourceClip": {
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/import/d0/d01c3b3b-0ded-490b-a2ca-137f7b36ad8e.f436f.json",
+        "binaryUrl": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/import/d0/d01c3b3b-0ded-490b-a2ca-137f7b36ad8e.f436f.bin",
+        "binarySha256": "d9e6406327fc1cb32984404d092fad9ed9b6b756a38fb1bfbf0d281ff736d16d",
+        "name": "ui_anim_move_base",
+        "durationSeconds": 0.8166666666666667
+      },
+      "output": {
+        "width": 31,
+        "height": 36
+      },
+      "animationExport": {
+        "frameDurationsMs": [
+          167,
+          150,
+          166,
+          150,
+          167,
+          17
+        ],
+        "durationSeconds": 0.817,
+        "loop": 0,
+        "encoding": "img2webp 1.6.0 -lossless -m 6"
+      },
+      "sceneMotion": {
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/import/ff/ff4751f1-6108-4374-9e65-4c0e51815170.e96eb.json",
+        "binarySha256": "eb54a9d5e7f9a2bc6520a61445c4cb727805215ae781021112562f3b37d3a910",
+        "name": "ui_anim_loop",
+        "durationSeconds": 80,
+        "implementation": "Native SVG transforms preserve the official prefab positions, anchors, scales and draw order: 3 pine trees, 1 round tree, flowering shrub, grass, flower, 3 clouds and mountain. CSS angular travel follows the 10/20/40/80-second periods and starting phases; sub-frame wrap transitions and wind deformation are approximated. Cart deformation follows the official 49/60-second keyframes."
+      }
+    },
+    "sha256": "478272b7be04ec520e3f0b1041536d9f3207e22e7548d25252e9bbd596ab80c0"
+  },
+  {
+    "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_a2",
+    "file": "img_s3Treasure_a2.png",
+    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/16/1696ec9b9.725cb.png",
+    "sha256": "a966c5cd71ad0af79ae7555f207d42ef5e09a9c1bb57dd91ff87e03e839dc627",
+    "atlasSha256": "9667074e1dc8a86a3fbfaa1e3e05f4bc38144ddf4ac47bb8a67bd5999c62f73a",
+    "rect": {
+      "x": 930,
+      "y": 428,
+      "width": 91,
+      "height": 93
+    },
+    "rotated": false,
+    "originalSize": {
+      "width": 91,
+      "height": 93
+    },
+    "offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_a3",
+    "file": "img_s3Treasure_a3.png",
+    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/16/1696ec9b9.725cb.png",
+    "sha256": "8c10aefc8a4e5a8cf8ea4d6fb9f3c65cea4c8b1f0a6aba2a013f79eb3afba9b8",
+    "atlasSha256": "9667074e1dc8a86a3fbfaa1e3e05f4bc38144ddf4ac47bb8a67bd5999c62f73a",
+    "rect": {
+      "x": 898,
+      "y": 338,
+      "width": 48,
+      "height": 41
+    },
+    "rotated": false,
+    "originalSize": {
+      "width": 48,
+      "height": 41
+    },
+    "offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_a4",
+    "file": "img_s3Treasure_a4.png",
+    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/16/1696ec9b9.725cb.png",
+    "sha256": "d4977b4eaa1482f9720099728778939e92a8e2e8acee4e62279ce4f50764cfef",
+    "atlasSha256": "9667074e1dc8a86a3fbfaa1e3e05f4bc38144ddf4ac47bb8a67bd5999c62f73a",
+    "rect": {
+      "x": 952,
+      "y": 338,
+      "width": 36,
+      "height": 46
+    },
+    "rotated": true,
+    "originalSize": {
+      "width": 36,
+      "height": 46
+    },
+    "offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_a5",
+    "file": "img_s3Treasure_a5.png",
+    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/16/1696ec9b9.725cb.png",
+    "sha256": "eabbc2e72fadcf8bb105d144c8e69eb25bfa28e6aedb4bc5914cac2d957ba933",
+    "atlasSha256": "9667074e1dc8a86a3fbfaa1e3e05f4bc38144ddf4ac47bb8a67bd5999c62f73a",
+    "rect": {
+      "x": 930,
+      "y": 690,
+      "width": 115,
+      "height": 64
+    },
+    "rotated": true,
+    "originalSize": {
+      "width": 115,
+      "height": 64
+    },
+    "offset": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_bg5",
+    "file": "img_s3Treasure_bg5.png",
+    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/16/1696ec9b9.725cb.png",
+    "sha256": "8be59f4ed83e59476f41c5554078f046d798510aa036316842df12396de596c0",
+    "atlasSha256": "9667074e1dc8a86a3fbfaa1e3e05f4bc38144ddf4ac47bb8a67bd5999c62f73a",
+    "rect": {
+      "x": 3,
+      "y": 3,
+      "width": 720,
+      "height": 376
+    },
+    "rotated": false,
+    "originalSize": {
+      "width": 720,
+      "height": 376
+    },
+    "offset": {
+      "x": 0,
+      "y": 0
+    }
   }
 ]
