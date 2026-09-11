@@ -7,7 +7,7 @@ import PetEscortLandscape from './PetEscortLandscape.vue'
 
 const props = defineProps<{ now: number }>()
 const diary = usePetDiaryStore()
-const { activity: pet, pending, error, notice, stale, plunderRecords } = storeToRefs(diary)
+const { activity: pet, pending, error, stale, plunderRecords } = storeToRefs(diary)
 const dialog = ref<HTMLDialogElement | null>(null)
 const opened = ref(false)
 const view = ref<'home' | 'queue' | 'logs' | 'charms' | 'choose' | 'rules'>('home')
@@ -137,13 +137,7 @@ defineExpose({ open })
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
         </button>
       </header>
-      <div class="escort-body">
-        <p v-if="error" class="escort-feedback escort-error" role="alert">
-          {{ error }}
-        </p>
-        <p v-if="notice" class="escort-feedback" role="status">
-          {{ notice }}
-        </p>
+      <div class="escort-body pet-scrollbar">
         <nav v-if="view !== 'home' && view !== 'choose'" class="escort-tools" aria-label="护送功能">
           <button :aria-current="view === 'queue' ? 'page' : undefined" @click="view = 'queue'">
             <img :src="art('img_s3Treasure_wait')" alt="">待护送 {{ waiting.length }}
@@ -442,18 +436,6 @@ defineExpose({ open })
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-}
-.escort-feedback {
-  margin: 10px 0 !important;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #e8ecc9;
-  overflow-wrap: anywhere;
-}
-.escort-error {
-  color: #9c3f2b;
-  background: #f9dcc7;
 }
 .escort-tools {
   display: grid;

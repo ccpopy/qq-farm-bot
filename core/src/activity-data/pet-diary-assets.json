@@ -1447,7 +1447,7 @@
   {
     "path": "derived/pet-diary/spine/scene-home-puppy",
     "file": "scene-home-puppy.png",
-    "sha256": "0b9a057cd27b243c2a5c2f3f325545c9140754368a6f1717bdfb1eeefbd8f323",
+    "sha256": "6ca4e128597d9c3d3da153945b9bfae4e3f193b3bdd9de6214d274e736950ac7",
     "derived": {
       "method": "Official Spine mesh/bone rendering; no rectangular atlas reconstruction",
       "version": "3.8.99",
@@ -1487,18 +1487,24 @@
         },
         "dogPlacement": {
           "x": 261,
-          "y": 691.5728155339806,
-          "width": 378,
-          "height": 358.4271844660194
+          "y": 691.2669902912621,
+          "width": 377.99999999999994,
+          "height": 358.7330097087378
         },
-        "alphaTrimThreshold": 8
+        "alphaTrimThreshold": 8,
+        "dogRenderWidth": 1240
+      },
+      "textureAlpha": {
+        "source": "premultiplied",
+        "decode": "createImageBitmap with premultiplyAlpha: none and colorSpaceConversion: none",
+        "upload": "PIXI.ALPHA_MODES.PMA; preserve source RGB without a second alpha multiplication"
       }
     }
   },
   {
     "path": "derived/pet-diary/spine/scene-home-adult",
     "file": "scene-home-adult.png",
-    "sha256": "42331216f329e4cd32de4db2354237c6e42c899d81d385c4f7f1040f7ec2437f",
+    "sha256": "93b9760b594d2e1fe18339a4b7db5ffeb35bb04f6d99781535f888025b7d59d7",
     "derived": {
       "method": "Official Spine mesh/bone rendering; no rectangular atlas reconstruction",
       "version": "3.8.99",
@@ -1537,12 +1543,18 @@
           "height": 1400
         },
         "dogPlacement": {
-          "x": 294.45814977973566,
+          "x": 294.2101396032329,
           "y": 686,
-          "width": 311.0837004405287,
+          "width": 311.5797207935342,
           "height": 364
         },
-        "alphaTrimThreshold": 8
+        "alphaTrimThreshold": 8,
+        "dogRenderWidth": 1240
+      },
+      "textureAlpha": {
+        "source": "premultiplied",
+        "decode": "createImageBitmap with premultiplyAlpha: none and colorSpaceConversion: none",
+        "upload": "PIXI.ALPHA_MODES.PMA; preserve source RGB without a second alpha multiplication"
       }
     }
   },
@@ -2844,6 +2856,154 @@
     "offset": {
       "x": 0,
       "y": 0
+    }
+  },
+  {
+    "path": "derived/pet-diary/spine/dog-puppy-tap",
+    "file": "dog-puppy-tap.webp",
+    "sha256": "43c1005bb20c980dd4ec872a4a059345b57a4da903e804747a66d84a3068972d",
+    "derived": {
+      "method": "Official Spine interaction rendered to a transparent, fixed-crop WebP; loaded only on touch",
+      "version": "3.8.99",
+      "renderer": "pixi.js 7.4.3 + @pixi-spine/runtime-3.8 4.0.6",
+      "animation": "interact_02",
+      "skin": "default",
+      "skeleton": {
+        "file": "puppy.json",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/48/4859d468-5e98-49ca-8fba-25526ae0e0fc.b22b0.json",
+        "sha256": "52075fd0fe06d6e8310a8b4a4ee26592e06382108ee3c6004417d7d79a8c345b",
+        "extraction": "embedded SkeletonData JSON from Cocos import"
+      },
+      "atlas": {
+        "file": "puppy.atlas",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/48/4859d468-5e98-49ca-8fba-25526ae0e0fc.b22b0.json",
+        "sha256": "469d8af21f00e6f657fcb21ccde93d7c105ceb2215f3aebe9c85936035c87b35"
+      },
+      "texture": {
+        "file": "puppy.png",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/native/4a/4a3f009a-e6ba-438f-b3c8-0d33e6598d8d.ba72b.png",
+        "sha256": "b9a5d6d6f474e1c4222b553dfb921ba26e380849a5e804d0164684d8c61aea8f",
+        "bytes": 681210
+      },
+      "textureAlpha": {
+        "source": "premultiplied",
+        "decode": "createImageBitmap with premultiplyAlpha: none and colorSpaceConversion: none",
+        "upload": "PIXI.ALPHA_MODES.PMA; preserve source RGB without a second alpha multiplication"
+      },
+      "output": {
+        "width": 448,
+        "height": 466,
+        "crop": {
+          "x": -158.76394005153833,
+          "y": -315.49745737164676,
+          "width": 333.0972875514034,
+          "height": 345.37360036042315
+        },
+        "fps": 12,
+        "frames": 36,
+        "durationMs": 3000,
+        "loopCount": 1,
+        "bytes": 712652
+      },
+      "composition": {
+        "room": "img_s3BattlePass_bg.png",
+        "roomSha256": "0acac24b2e5cdce4de3c9d9035a52efca3f239f3ec0d2cf07b7c3bccfcc3ad46",
+        "roomCrop": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 1400
+        },
+        "dogPlacement": {
+          "x": 241,
+          "y": 637,
+          "width": 407,
+          "height": 422
+        },
+        "note": "The same skeleton origin and scale as the static home scene; frames are never trimmed independently."
+      },
+      "encoding": {
+        "tool": "libwebp 1.6.0 img2webp",
+        "mode": "lossy",
+        "quality": 80,
+        "method": 4,
+        "sharpYuv": true,
+        "minSize": true
+      }
+    }
+  },
+  {
+    "path": "derived/pet-diary/spine/dog-adult-tap",
+    "file": "dog-adult-tap.webp",
+    "sha256": "9f1e9faca4c7185f5c165125737f23113c43b8501f8aac0b60575787e29452b7",
+    "derived": {
+      "method": "Official Spine interaction rendered to a transparent, fixed-crop WebP; loaded only on touch",
+      "version": "3.8.99",
+      "renderer": "pixi.js 7.4.3 + @pixi-spine/runtime-3.8 4.0.6",
+      "animation": "interact_02",
+      "skin": "default",
+      "skeleton": {
+        "file": "adult.json",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/0a/0a1b5ff1c.95852.json",
+        "sha256": "6719397e2f0ae42a6aaf9bec7b02e6e8ed70936350ad858cd1481b3755533ba9",
+        "extraction": "embedded SkeletonData JSON from Cocos import"
+      },
+      "atlas": {
+        "file": "adult.atlas",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/0a/0a1b5ff1c.95852.json",
+        "sha256": "f3d2adc48746492931e34f3ea619063f787a39d976f09940c16d7f3084e88f95"
+      },
+      "texture": {
+        "file": "adult.png",
+        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/native/ca/ca3d54ba-7afe-4530-a40d-1a9373caad6a.fceb6.png",
+        "sha256": "8ef363ea41de119b1421a61fb0c1345d9a6672badf942f0ede079abfdc5a6b0c",
+        "bytes": 695936
+      },
+      "textureAlpha": {
+        "source": "premultiplied",
+        "decode": "createImageBitmap with premultiplyAlpha: none and colorSpaceConversion: none",
+        "upload": "PIXI.ALPHA_MODES.PMA; preserve source RGB without a second alpha multiplication"
+      },
+      "output": {
+        "width": 448,
+        "height": 486,
+        "crop": {
+          "x": -185.065281038122,
+          "y": -350.628646433231,
+          "width": 350.67116833410967,
+          "height": 379.5293941571162
+        },
+        "fps": 12,
+        "frames": 34,
+        "durationMs": 2833,
+        "loopCount": 1,
+        "bytes": 709306
+      },
+      "composition": {
+        "room": "img_s3BattlePass_bg.png",
+        "roomSha256": "0acac24b2e5cdce4de3c9d9035a52efca3f239f3ec0d2cf07b7c3bccfcc3ad46",
+        "roomCrop": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 1400
+        },
+        "dogPlacement": {
+          "x": 223,
+          "y": 625,
+          "width": 401,
+          "height": 434
+        },
+        "note": "The same skeleton origin and scale as the static home scene; frames are never trimmed independently."
+      },
+      "encoding": {
+        "tool": "libwebp 1.6.0 img2webp",
+        "mode": "lossy",
+        "quality": 80,
+        "method": 4,
+        "sharpYuv": true,
+        "minSize": true
+      }
     }
   }
 ]

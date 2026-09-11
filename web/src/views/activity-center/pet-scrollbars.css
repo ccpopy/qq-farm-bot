@@ -1,0 +1,54 @@
+/* Scoped to this activity, including native dialog content in the top layer. */
+.pet-diary .pet-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.pet-diary .pet-scrollbar:hover,
+.pet-diary .pet-scrollbar:focus-visible {
+  scrollbar-color: #bda581 transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  .pet-diary .pet-scrollbar,
+  .pet-diary .pet-scrollbar:hover,
+  .pet-diary .pet-scrollbar:focus-visible {
+    /* Standard scrollbar colors override WebKit's arrow and thumb rules. */
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  .pet-diary .pet-scrollbar::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  .pet-diary .pet-scrollbar::-webkit-scrollbar-track,
+  .pet-diary .pet-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  .pet-diary .pet-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .pet-diary .pet-scrollbar::-webkit-scrollbar-thumb {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    background-clip: padding-box;
+  }
+  .pet-diary .pet-scrollbar:hover::-webkit-scrollbar-thumb,
+  .pet-diary .pet-scrollbar:focus-visible::-webkit-scrollbar-thumb {
+    background-color: #bda581;
+  }
+}
+@media (hover: none) {
+  .pet-diary .pet-scrollbar {
+    scrollbar-color: #bda581 transparent;
+  }
+  @supports selector(::-webkit-scrollbar) {
+    .pet-diary .pet-scrollbar {
+      scrollbar-color: auto;
+    }
+    .pet-diary .pet-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #bda581;
+    }
+  }
+}
