@@ -909,7 +909,7 @@ watch(pet, (value) => {
 }
 .pet-button--small {
   padding: 7px 13px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-diary button:disabled {
   opacity: 0.55;
@@ -1166,7 +1166,7 @@ watch(pet, (value) => {
   display: block;
   margin: 5px 0 0;
   color: #885c38;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-care-note--warning {
   max-width: 240px;
@@ -1177,7 +1177,7 @@ watch(pet, (value) => {
 .pet-permanent {
   margin-top: 16px;
   color: var(--pet-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-card {
   min-width: 0;
@@ -1190,7 +1190,7 @@ watch(pet, (value) => {
 .pet-card p {
   margin: 0 0 14px;
   color: var(--pet-muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.7;
 }
 .pet-card > :last-child,
@@ -1234,7 +1234,7 @@ watch(pet, (value) => {
   grid-row: 2;
   margin-top: 2px;
   color: var(--pet-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-section-title > .pet-button {
   grid-column: 2;
@@ -1264,7 +1264,7 @@ watch(pet, (value) => {
   align-items: center;
   flex-direction: column;
   gap: 3px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-seed-rewards img {
   width: 64px;
@@ -1281,15 +1281,15 @@ watch(pet, (value) => {
   text-align: left;
 }
 .pet-grow-tip strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .pet-grow-tip p {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-grow-tip .pet-text-button {
   margin-top: 10px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-home-panels {
   display: grid;
@@ -1315,7 +1315,7 @@ watch(pet, (value) => {
 }
 .pet-stats dt {
   color: var(--pet-muted);
-  font-size: 11px;
+  font-size: 14px;
 }
 .pet-stats dd {
   margin: 2px 0 0;
@@ -1345,7 +1345,7 @@ watch(pet, (value) => {
   gap: 10px;
   min-height: 110px;
   padding: 12px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-empty img {
   width: 54px;
@@ -1377,15 +1377,15 @@ watch(pet, (value) => {
 .pet-treasure b {
   display: block;
   color: var(--pet-muted);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 400;
 }
 .pet-treasure strong,
 .pet-charm strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .pet-charm p {
-  font-size: 12px;
+  font-size: 14px;
   margin: 5px 0;
 }
 .pet-charm small {
@@ -1393,13 +1393,13 @@ watch(pet, (value) => {
   border-radius: 6px;
   background: #e7edc7;
   color: #748830;
-  font-size: 10px;
+  font-size: 14px;
 }
 .pet-charm span,
 .pet-muted {
   display: block;
   color: var(--pet-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-card > summary {
   display: grid;
@@ -1425,7 +1425,7 @@ watch(pet, (value) => {
   grid-row: 2;
   margin-top: 2px;
   color: var(--pet-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-chevron {
   grid-column: 2;
@@ -1462,7 +1462,7 @@ watch(pet, (value) => {
 .pet-rules p {
   margin: 0 0 12px;
   white-space: pre-line;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pet-friend-toolbar {
   display: flex;
@@ -1582,7 +1582,7 @@ watch(pet, (value) => {
 }
 .pet-friend-name small {
   color: var(--pet-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-friend-state {
   flex: none;
@@ -1599,7 +1599,7 @@ watch(pet, (value) => {
 }
 .pet-friend-more {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .pet-friend-result {
   margin-top: 18px;
@@ -1641,7 +1641,7 @@ watch(pet, (value) => {
 }
 .pet-friend-treasure > header span {
   color: var(--pet-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-preview {
   display: grid;
@@ -1651,7 +1651,7 @@ watch(pet, (value) => {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed var(--pet-border);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-preview-cost {
   display: flex;
@@ -1660,11 +1660,12 @@ watch(pet, (value) => {
   line-height: 1.4;
 }
 .pet-preview-cost strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 .pet-preview-cost small,
 .pet-preview-odds {
   color: var(--pet-muted);
+  font-size: 14px;
 }
 .pet-preview-odds {
   white-space: nowrap;
@@ -1681,7 +1682,7 @@ watch(pet, (value) => {
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px dashed var(--pet-border);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-log time {
   min-width: 86px;
@@ -1762,7 +1763,7 @@ watch(pet, (value) => {
   height: auto;
 }
 .pet-story p {
-  font-size: 12px;
+  font-size: 14px;
   margin: 8px 0 13px;
 }
 .pet-caption {
@@ -1776,7 +1777,7 @@ watch(pet, (value) => {
   background: transparent;
 }
 .pet-story .pet-button {
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-story-claim img {
   width: 25px;
@@ -1808,7 +1809,7 @@ watch(pet, (value) => {
   border: 0 solid transparent;
   border-image: url('/activity-assets/pet-diary/img_S3Shop_tips_bg.png') 0 50 fill / 0 36px / 0 stretch;
   color: #b77949;
-  font-size: clamp(13px, 2.1cqw, 21px);
+  font-size: clamp(14px, 2.1cqw, 21px);
   font-weight: 800;
   text-align: center;
 }
@@ -1917,7 +1918,7 @@ watch(pet, (value) => {
 .pet-shop-footer p {
   margin: 0 0 16px;
   color: var(--pet-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-solar {
   display: flex;
@@ -2033,7 +2034,7 @@ watch(pet, (value) => {
 }
 .pet-solar-gift p {
   margin: 3px 0 0;
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.75;
 }
 .pet-solar-gift > .pet-button {
@@ -2050,7 +2051,7 @@ watch(pet, (value) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-inline-rewards img {
   width: 40px;
@@ -2161,13 +2162,13 @@ watch(pet, (value) => {
 .pet-exchange-product p {
   margin: 0;
   color: #aa8564;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-quantity-label {
   display: block;
   margin-bottom: 7px;
   color: #a5805b;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-quantity {
   display: flex;
@@ -2202,7 +2203,7 @@ watch(pet, (value) => {
   height: 20px;
 }
 .pet-quantity button:last-child {
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-quantity input {
   width: 100%;
@@ -2217,7 +2218,7 @@ watch(pet, (value) => {
 }
 .pet-exchange-limit {
   margin: 20px 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
 }
 .pet-exchange-cost {
@@ -2244,7 +2245,7 @@ watch(pet, (value) => {
   margin: 8px 0 0;
   text-align: center;
   color: #aa664c;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pet-exchange-submit {
   display: flex;
@@ -2397,7 +2398,7 @@ watch(pet, (value) => {
     height: 22px;
   }
   .pet-care-note {
-    font-size: 11px;
+    font-size: 14px;
   }
   .pet-gift {
     padding: 22px var(--pet-card-pad) 20px;
@@ -2435,7 +2436,7 @@ watch(pet, (value) => {
   }
   .pet-story .pet-button {
     padding: 8px 12px;
-    font-size: 11px;
+    font-size: 14px;
   }
   .pet-caption {
     height: 42px;
@@ -2448,7 +2449,7 @@ watch(pet, (value) => {
     padding: 6px 16px;
     margin: -6px auto 28px;
     border-image-width: 0 23px;
-    font-size: 12px;
+    font-size: 14px;
   }
   .pet-goods {
     gap: 26px 10px;
@@ -2460,7 +2461,7 @@ watch(pet, (value) => {
   }
   .pet-product-name {
     margin: 3px 0;
-    font-size: 11px;
+    font-size: 14px;
     line-height: 1.4;
   }
   .pet-price {
@@ -2476,10 +2477,10 @@ watch(pet, (value) => {
     padding-top: 20px;
   }
   .pet-shop-footer p {
-    font-size: 11px;
+    font-size: 14px;
   }
   .pet-shop-footer .pet-button {
-    font-size: 12px;
+    font-size: 14px;
   }
   .pet-friend-list {
     grid-template-columns: minmax(0, 1fr);
@@ -2535,7 +2536,7 @@ watch(pet, (value) => {
     gap: 16px;
   }
   .pet-inline-rewards > span {
-    font-size: 11px;
+    font-size: 14px;
   }
   .pet-inline-rewards img {
     width: 34px;
@@ -2563,13 +2564,13 @@ watch(pet, (value) => {
     width: 135px;
   }
   .pet-product-name {
-    font-size: 10px;
+    font-size: 14px;
   }
   .pet-stats dd {
     font-size: 16px;
   }
   .pet-price {
-    font-size: 12px;
+    font-size: 14px;
   }
   .pet-price img {
     width: 17px;

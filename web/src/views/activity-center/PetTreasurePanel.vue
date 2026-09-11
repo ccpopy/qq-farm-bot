@@ -772,7 +772,7 @@ defineExpose({ open })
 .escort-refresh-hint {
   grid-column: 1 / -1;
   text-align: right;
-  font-size: 11px;
+  font-size: 14px;
   color: #7d704b;
 }
 .escort-charm-current > h3,
@@ -807,6 +807,7 @@ defineExpose({ open })
 }
 .escort-charm-row small {
   color: #8c7b55;
+  font-size: 14px;
 }
 .escort-charm-actions {
   display: flex;
@@ -882,7 +883,7 @@ defineExpose({ open })
   color: #aa8961;
 }
 .escort-rewards h3 span {
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0;
 }
 .escort-reward-items {
@@ -966,7 +967,7 @@ defineExpose({ open })
   background: #e0e8bd;
   color: #637b3b;
   border-radius: 15px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .escort-treasure-card dl {
   display: grid;
@@ -977,7 +978,7 @@ defineExpose({ open })
 .escort-treasure-card dt,
 .escort-treasure-card small {
   color: #a08d6c;
-  font-size: 12px;
+  font-size: 14px;
 }
 .escort-treasure-card dd {
   margin: 3px 0 0;
@@ -988,7 +989,7 @@ defineExpose({ open })
   margin-top: 8px;
 }
 .escort-log-card time {
-  font-size: 12px;
+  font-size: 14px;
   color: #a08d6c;
 }
 .escort-log-change {
@@ -1015,12 +1016,12 @@ defineExpose({ open })
   border-radius: 10px;
   background: #e2ebc6;
   color: #6d843e;
-  font-size: 11px;
+  font-size: 14px;
   white-space: nowrap;
 }
 .escort-note {
   color: #9f8d70;
-  font-size: 12px;
+  font-size: 14px;
 }
 .escort-rules {
   padding: 5px 10px 16px;
@@ -1045,7 +1046,7 @@ defineExpose({ open })
   border: 0;
   color: #a4845b;
   background: transparent;
-  font-size: 12px !important;
+  font-size: 14px !important;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1126,7 +1127,7 @@ defineExpose({ open })
     font-size: 15px;
   }
   .escort-charm-row p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .escort-charm-option {
     flex-wrap: wrap;
