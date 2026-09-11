@@ -1,11 +1,5 @@
 [
   {
-    "path": "gui/texture/Season/S3/S3JieqiBigImg/img_S3Jieqi_pattern_bailu",
-    "file": "img_S3Jieqi_pattern_bailu.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/04/04211378-5a4d-484f-bb94-ec6f32d7debb.22617.png",
-    "sha256": "125a6d5c5603ac6f03bfb31a51e0c386100bc76184c5b91a2dbd275ad1f9feff"
-  },
-  {
     "path": "gui/texture/Season/S3/S3PhotoWallPhotos/img_s3PhotoWall_photo5",
     "file": "img_s3PhotoWall_photo5.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/04/04762433-d7fd-45bf-bf7a-74761c70f7ce.a4e96.png",
@@ -54,12 +48,6 @@
     "sha256": "ca14a3ef5222fb91233a4edf264e45fe96f16dd8ed6c52c8d732f8f98474bb09"
   },
   {
-    "path": "gui/texture/Season/S3/S3Open/BigImg/img_S3Open_bg",
-    "file": "img_S3Open_bg.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/27/27148419-80e8-4a3e-baf3-ad2ba0a0ccf6.94f7f.png",
-    "sha256": "7a4507f15be81adfd57f427e9c3347c508e3fd9a476e676a9750945fc86aeb2d"
-  },
-  {
     "path": "gui/texture/Season/S3/S3PhotoWallPhotos/img_s3PhotoWall_say12",
     "file": "img_s3PhotoWall_say12.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/2b/2b93d3db-f7f2-4a0c-af0e-42366e73ddc3.7f264.png",
@@ -96,12 +84,6 @@
     "sha256": "6cbf51f4a65dcc16bfa941269b28211f581bb806ecae99425c4315b19acb3d4c"
   },
   {
-    "path": "gui/texture/Season/S3/S3JieqiBigImg/img_S3Jieqi_title_bailu",
-    "file": "img_S3Jieqi_title_bailu.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/41/41388c48-aacd-4953-9bb9-ffea823240ba.1471c.png",
-    "sha256": "461bc4dc146575b228f548de1d529f1a423585f42c553249fe4914a9559b1c22"
-  },
-  {
     "path": "gui/texture/Season/S3/S3PhotoWallPhotos/img_s3PhotoWall_say11",
     "file": "img_s3PhotoWall_say11.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/45/4555e042-043d-4777-8134-211f96006b66.e36a6.png",
@@ -118,12 +100,6 @@
     "file": "img_s3PhotoWall_say0.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/47/47f1f623-da24-4b9b-bb80-3c20cd5bb3ef.a2f8b.png",
     "sha256": "0f842e5a35cf9ddac0a49756c915ce0493f64a61f83baf0c655f4d0cd634237d"
-  },
-  {
-    "path": "gui/texture/Season/S3/S3Open/BigImg/S3Open_dog_3",
-    "file": "S3Open_dog_3.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/4a/4a7ee01d-b92a-41b7-8ac8-7af75a421322.3f62d.png",
-    "sha256": "9c9255c16f4ef7aef8016f39955662957902532a833c80bce572aa376ae94f69"
   },
   {
     "path": "gui/texture/Season/S3/S3PhotoWallPhotos/img_s3PhotoWall_say1",
@@ -228,12 +204,6 @@
     "sha256": "6a30ea618d613f8a2c5bb81276e9d0b5073b3ac3c3afdfaab2826e37c80538d6"
   },
   {
-    "path": "gui/texture/Season/S3/S3Open/BigImg/S3Open_dog_2",
-    "file": "S3Open_dog_2.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/c2/c29145ea-6494-4c63-aa4f-691f09061e70.e5491.png",
-    "sha256": "59555f712ae5ce4a2e8babcc1053a9ee303d941c7c5d7c8e8d684b9d630ed43f"
-  },
-  {
     "path": "gui/texture/activity/yuanqigao/img_exchange_item6",
     "file": "img_exchange_item6.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/c4/c4c9ab7c-679d-4077-a8e8-4b5ef5cdee8b.8e4e1.png",
@@ -300,94 +270,6 @@
     "sha256": "e144a163d348a6d968077725e0364ef2bd945e69dffa98f24675145d1ebe88e4"
   },
   {
-    "path": "gui/texture/Season/S3/S3PhotoWallUI/img_s3PhotoWall_closeBtn",
-    "file": "img_s3PhotoWall_closeBtn.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/18e9b1176.cb8e1.png",
-    "sha256": "f8be1387b18d2cdcbc118f4068343a7db434a72a992a7b74adda4b7f94e8db75",
-    "atlasSha256": "0fad8a86939b3ceae4c3a4aac84f0148217ae95b6e0f22e0a7aba96d6aa30d43",
-    "rect": {
-      "x": 3,
-      "y": 936,
-      "width": 83,
-      "height": 91
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 83,
-      "height": 91
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3PhotoWallUI/img_s3PhotoWall_arrow",
-    "file": "img_s3PhotoWall_arrow.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/18e9b1176.cb8e1.png",
-    "sha256": "0a72259da1e4925af9f58228121810668f593adf6dbe5a61ce5c924dc848b2ad",
-    "atlasSha256": "0fad8a86939b3ceae4c3a4aac84f0148217ae95b6e0f22e0a7aba96d6aa30d43",
-    "rect": {
-      "x": 100,
-      "y": 936,
-      "width": 101,
-      "height": 74
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 101,
-      "height": 74
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3PhotoWallUI/img_s3PhotoWall_zhang",
-    "file": "img_s3PhotoWall_zhang.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/18e9b1176.cb8e1.png",
-    "sha256": "bf73c4612e7a536357268f954ef2f3ab7116a0e2248f563cb9a49cf0f88f6c61",
-    "atlasSha256": "0fad8a86939b3ceae4c3a4aac84f0148217ae95b6e0f22e0a7aba96d6aa30d43",
-    "rect": {
-      "x": 205,
-      "y": 298,
-      "width": 192,
-      "height": 127
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 192,
-      "height": 127
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3PhotoWallUI/img_s3PhotoWall_star",
-    "file": "img_s3PhotoWall_star.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/18e9b1176.cb8e1.png",
-    "sha256": "a743105d91682d4526b9310c487bcfaf90d23865899849ba43f9973c75d25bce",
-    "atlasSha256": "0fad8a86939b3ceae4c3a4aac84f0148217ae95b6e0f22e0a7aba96d6aa30d43",
-    "rect": {
-      "x": 205,
-      "y": 431,
-      "width": 51,
-      "height": 60
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 51,
-      "height": 60
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
     "path": "gui/texture/Season/S3/S3PhotoWallUI/img_s3PhotoWall_emptyBg",
     "file": "img_s3PhotoWall_emptyBg.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/18e9b1176.cb8e1.png",
@@ -451,28 +333,6 @@
     "offset": {
       "x": 0,
       "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3PhotoWallUI/img_s3PhotoWall_bg1",
-    "file": "img_s3PhotoWall_bg1.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/18e9b1176.cb8e1.png",
-    "sha256": "b0291bfa911910ecaafdf46201a3cfa22be06c470e77bad901c9a3501b67b7e4",
-    "atlasSha256": "0fad8a86939b3ceae4c3a4aac84f0148217ae95b6e0f22e0a7aba96d6aa30d43",
-    "rect": {
-      "x": 3,
-      "y": 3,
-      "width": 617,
-      "height": 196
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 617,
-      "height": 201
-    },
-    "offset": {
-      "x": 0,
-      "y": -2.5
     }
   },
   {
@@ -872,50 +732,6 @@
     }
   },
   {
-    "path": "gui/texture/Season/S3/S3Shop/img/img_S3Shop_rarity_2",
-    "file": "img_S3Shop_rarity_2.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/186dff3a1.b5c2b.png",
-    "sha256": "4547ae79b94637377d264f65bcda1d873e3db9d30abf671a7eaf01dc028fd77f",
-    "atlasSha256": "2e847493dd7a215362b6fb39c0634c9fc3e4ed25ed3c2ff95460e8a4e2927736",
-    "rect": {
-      "x": 147,
-      "y": 407,
-      "width": 197,
-      "height": 58
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 197,
-      "height": 58
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3Shop/img/img_S3Shop_rarity_bg_2",
-    "file": "img_S3Shop_rarity_bg_2.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/186dff3a1.b5c2b.png",
-    "sha256": "983f94d4c88e0735932c191b4f1c348c172571ceadbbca4873ae8636eef5b33e",
-    "atlasSha256": "2e847493dd7a215362b6fb39c0634c9fc3e4ed25ed3c2ff95460e8a4e2927736",
-    "rect": {
-      "x": 3,
-      "y": 666,
-      "width": 225,
-      "height": 137
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 225,
-      "height": 137
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
     "path": "gui/texture/Season/S3/S3Shop/img/img_S3Shop_rarity_3",
     "file": "img_S3Shop_rarity_3.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/18/186dff3a1.b5c2b.png",
@@ -960,50 +776,6 @@
     }
   },
   {
-    "path": "gui/texture/Season/S3/S3BattlePass/img_s3BattlePass_btn1",
-    "file": "img_s3BattlePass_btn1.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1a/1ae041764.c347c.png",
-    "sha256": "8dfd52c2aa1d173cf2fe0cee501f8c8ac7e633bb94313c60c8a427e7309e9658",
-    "atlasSha256": "76dd98277d66a515f084ef1d4b15922dc8fd8b98308644289ad14af7a75a0094",
-    "rect": {
-      "x": 458,
-      "y": 264,
-      "width": 279,
-      "height": 95
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 279,
-      "height": 95
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3BattlePass/img_s3BattlePass_cost",
-    "file": "img_s3BattlePass_cost.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1a/1ae041764.c347c.png",
-    "sha256": "889e0eb4dab70ddaec11ae2f507da51bd1ed5b7d2f13cd37904c7797ec14bfe3",
-    "atlasSha256": "76dd98277d66a515f084ef1d4b15922dc8fd8b98308644289ad14af7a75a0094",
-    "rect": {
-      "x": 837,
-      "y": 333,
-      "width": 33,
-      "height": 33
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 33,
-      "height": 33
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
     "path": "gui/texture/Season/S3/S3BattlePass/img_s3BattlePass_chat7",
     "file": "img_s3BattlePass_chat7.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1a/1ae041764.c347c.png",
@@ -1041,50 +813,6 @@
     "originalSize": {
       "width": 272,
       "height": 80
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3BattlePass/img_s3BattlePass_pet",
-    "file": "img_s3BattlePass_pet.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1a/1ae041764.c347c.png",
-    "sha256": "a8cc3cc240420b60c5a39cc70998d015af0954a4358ad7fc69cf4ccbd8a17827",
-    "atlasSha256": "76dd98277d66a515f084ef1d4b15922dc8fd8b98308644289ad14af7a75a0094",
-    "rect": {
-      "x": 434,
-      "y": 653,
-      "width": 235,
-      "height": 240
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 235,
-      "height": 240
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3BattlePass/img_s3BattlePass_seeBtn",
-    "file": "img_s3BattlePass_seeBtn.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1a/1ae041764.c347c.png",
-    "sha256": "f339c439033a3bc66a62eb9d2bf5c5bb772dfa3258c2b85e8c03c9f870b7e6e5",
-    "atlasSha256": "76dd98277d66a515f084ef1d4b15922dc8fd8b98308644289ad14af7a75a0094",
-    "rect": {
-      "x": 3,
-      "y": 796,
-      "width": 124,
-      "height": 125
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 124,
-      "height": 125
     },
     "offset": {
       "x": 0,
@@ -1180,116 +908,6 @@
     }
   },
   {
-    "path": "gui/texture/Season/S3/S3Jieqi/btn_S3Jieqi_got",
-    "file": "btn_S3Jieqi_got.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1c/1cea6674e.9507e.png",
-    "sha256": "5777ae4b0e089ca4a7068b789cc936bbe01499a121a3f6af35ec896017b62708",
-    "atlasSha256": "467a54e6037ffd6a3aff5a38ece3a59d322e60697ea92d4831b47c1fe3d98dde",
-    "rect": {
-      "x": 3,
-      "y": 307,
-      "width": 228,
-      "height": 66
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 228,
-      "height": 66
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3Jieqi/img_S3Jieqi_stage_normal",
-    "file": "img_S3Jieqi_stage_normal.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1c/1cea6674e.9507e.png",
-    "sha256": "d1c8d10b9b803e42919d6b817ae045e51248f34043295c546ba6a8d50af59d44",
-    "atlasSha256": "467a54e6037ffd6a3aff5a38ece3a59d322e60697ea92d4831b47c1fe3d98dde",
-    "rect": {
-      "x": 3,
-      "y": 230,
-      "width": 74,
-      "height": 71
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 74,
-      "height": 71
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3Jieqi/img_S3Jieqi_stage_lock",
-    "file": "img_S3Jieqi_stage_lock.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1c/1cea6674e.9507e.png",
-    "sha256": "1ac48605514dbbe1098c91cc5ced0e0c3423bcf2db8b9634ceb1bc7ba7ca4177",
-    "atlasSha256": "467a54e6037ffd6a3aff5a38ece3a59d322e60697ea92d4831b47c1fe3d98dde",
-    "rect": {
-      "x": 3,
-      "y": 152,
-      "width": 74,
-      "height": 72
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 74,
-      "height": 72
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3Jieqi/btn_S3Jieqi_get",
-    "file": "btn_S3Jieqi_get.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1c/1cea6674e.9507e.png",
-    "sha256": "4088fdc5295157506907f29dbc0e01652f8dfff126d588148b18aa3085483068",
-    "atlasSha256": "467a54e6037ffd6a3aff5a38ece3a59d322e60697ea92d4831b47c1fe3d98dde",
-    "rect": {
-      "x": 3,
-      "y": 541,
-      "width": 228,
-      "height": 66
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 228,
-      "height": 66
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3Jieqi/img_S3Jieqi_stage_select",
-    "file": "img_S3Jieqi_stage_select.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/1c/1cea6674e.9507e.png",
-    "sha256": "43dc6780409f8ab0c6c584e28cb9111d73d31ea056341c11a286390422b47b49",
-    "atlasSha256": "467a54e6037ffd6a3aff5a38ece3a59d322e60697ea92d4831b47c1fe3d98dde",
-    "rect": {
-      "x": 3,
-      "y": 3,
-      "width": 143,
-      "height": 92
-    },
-    "rotated": true,
-    "originalSize": {
-      "width": 143,
-      "height": 92
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
     "path": "gui/texture/Season/S3/S3JieqiBigImg/img_S3Jieqi_title_bailu#img_S3Jieqi_title_bailu_trim",
     "file": "img_S3Jieqi_title_bailu_trim.png",
     "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/41/41388c48-aacd-4953-9bb9-ffea823240ba.1471c.png",
@@ -1320,12 +938,6 @@
     "rotated": false,
     "originalSize": null,
     "offset": null
-  },
-  {
-    "path": "gui/texture/Season/S3/S3BattlePass/img_s3BattlePass_bg",
-    "file": "img_s3BattlePass_bg.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/82/82c9515d-361f-4fad-a71b-0417d24ec3a0.25615.png",
-    "sha256": "0acac24b2e5cdce4de3c9d9035a52efca3f239f3ec0d2cf07b7c3bccfcc3ad46"
   },
   {
     "path": "derived/pet-diary/spine/scene-bailu",
@@ -1492,7 +1104,8 @@
           "height": 358.7330097087378
         },
         "alphaTrimThreshold": 8,
-        "dogRenderWidth": 1240
+        "dogRenderWidth": 1240,
+        "roomSourceUrl": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/82/82c9515d-361f-4fad-a71b-0417d24ec3a0.25615.png"
       },
       "textureAlpha": {
         "source": "premultiplied",
@@ -1549,7 +1162,8 @@
           "height": 364
         },
         "alphaTrimThreshold": 8,
-        "dogRenderWidth": 1240
+        "dogRenderWidth": 1240,
+        "roomSourceUrl": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/82/82c9515d-361f-4fad-a71b-0417d24ec3a0.25615.png"
       },
       "textureAlpha": {
         "source": "premultiplied",
@@ -1684,28 +1298,6 @@
     "originalSize": {
       "width": 108,
       "height": 43
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_p1",
-    "file": "img_s3Treasure_p1.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/13/13ac35c8f.17cfd.png",
-    "sha256": "9131061ef7f5788f384705eb3642bd0bc2a2d7482ad607f2a0cbd67ef31bd210",
-    "atlasSha256": "60cf56306886df756ec95adf99d89481859f96886dd2a8a67b4bf2582c97bade",
-    "rect": {
-      "x": 340,
-      "y": 163,
-      "width": 102,
-      "height": 129
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 102,
-      "height": 129
     },
     "offset": {
       "x": 0,
@@ -1904,28 +1496,6 @@
     "originalSize": {
       "width": 109,
       "height": 157
-    },
-    "offset": {
-      "x": 0,
-      "y": 0
-    }
-  },
-  {
-    "path": "gui/texture/Season/S3/S3TreasureUI/img_s3Treasure_p0",
-    "file": "img_s3Treasure_p0.png",
-    "url": "https://cdn-resource.nqf.qq.com/release/remote/delayRes/native/16/1696ec9b9.725cb.png",
-    "sha256": "b066bbb5287af6977751c3192c2772d2d7791721e036a24059f1aad6b68a8c2b",
-    "atlasSha256": "9667074e1dc8a86a3fbfaa1e3e05f4bc38144ddf4ac47bb8a67bd5999c62f73a",
-    "rect": {
-      "x": 898,
-      "y": 205,
-      "width": 123,
-      "height": 127
-    },
-    "rotated": false,
-    "originalSize": {
-      "width": 123,
-      "height": 127
     },
     "offset": {
       "x": 0,
@@ -2856,154 +2426,6 @@
     "offset": {
       "x": 0,
       "y": 0
-    }
-  },
-  {
-    "path": "derived/pet-diary/spine/dog-puppy-tap",
-    "file": "dog-puppy-tap.webp",
-    "sha256": "43c1005bb20c980dd4ec872a4a059345b57a4da903e804747a66d84a3068972d",
-    "derived": {
-      "method": "Official Spine interaction rendered to a transparent, fixed-crop WebP; loaded only on touch",
-      "version": "3.8.99",
-      "renderer": "pixi.js 7.4.3 + @pixi-spine/runtime-3.8 4.0.6",
-      "animation": "interact_02",
-      "skin": "default",
-      "skeleton": {
-        "file": "puppy.json",
-        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/48/4859d468-5e98-49ca-8fba-25526ae0e0fc.b22b0.json",
-        "sha256": "52075fd0fe06d6e8310a8b4a4ee26592e06382108ee3c6004417d7d79a8c345b",
-        "extraction": "embedded SkeletonData JSON from Cocos import"
-      },
-      "atlas": {
-        "file": "puppy.atlas",
-        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/48/4859d468-5e98-49ca-8fba-25526ae0e0fc.b22b0.json",
-        "sha256": "469d8af21f00e6f657fcb21ccde93d7c105ceb2215f3aebe9c85936035c87b35"
-      },
-      "texture": {
-        "file": "puppy.png",
-        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/native/4a/4a3f009a-e6ba-438f-b3c8-0d33e6598d8d.ba72b.png",
-        "sha256": "b9a5d6d6f474e1c4222b553dfb921ba26e380849a5e804d0164684d8c61aea8f",
-        "bytes": 681210
-      },
-      "textureAlpha": {
-        "source": "premultiplied",
-        "decode": "createImageBitmap with premultiplyAlpha: none and colorSpaceConversion: none",
-        "upload": "PIXI.ALPHA_MODES.PMA; preserve source RGB without a second alpha multiplication"
-      },
-      "output": {
-        "width": 448,
-        "height": 466,
-        "crop": {
-          "x": -158.76394005153833,
-          "y": -315.49745737164676,
-          "width": 333.0972875514034,
-          "height": 345.37360036042315
-        },
-        "fps": 12,
-        "frames": 36,
-        "durationMs": 3000,
-        "loopCount": 1,
-        "bytes": 712652
-      },
-      "composition": {
-        "room": "img_s3BattlePass_bg.png",
-        "roomSha256": "0acac24b2e5cdce4de3c9d9035a52efca3f239f3ec0d2cf07b7c3bccfcc3ad46",
-        "roomCrop": {
-          "x": 0,
-          "y": 0,
-          "width": 900,
-          "height": 1400
-        },
-        "dogPlacement": {
-          "x": 241,
-          "y": 637,
-          "width": 407,
-          "height": 422
-        },
-        "note": "The same skeleton origin and scale as the static home scene; frames are never trimmed independently."
-      },
-      "encoding": {
-        "tool": "libwebp 1.6.0 img2webp",
-        "mode": "lossy",
-        "quality": 80,
-        "method": 4,
-        "sharpYuv": true,
-        "minSize": true
-      }
-    }
-  },
-  {
-    "path": "derived/pet-diary/spine/dog-adult-tap",
-    "file": "dog-adult-tap.webp",
-    "sha256": "9f1e9faca4c7185f5c165125737f23113c43b8501f8aac0b60575787e29452b7",
-    "derived": {
-      "method": "Official Spine interaction rendered to a transparent, fixed-crop WebP; loaded only on touch",
-      "version": "3.8.99",
-      "renderer": "pixi.js 7.4.3 + @pixi-spine/runtime-3.8 4.0.6",
-      "animation": "interact_02",
-      "skin": "default",
-      "skeleton": {
-        "file": "adult.json",
-        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/0a/0a1b5ff1c.95852.json",
-        "sha256": "6719397e2f0ae42a6aaf9bec7b02e6e8ed70936350ad858cd1481b3755533ba9",
-        "extraction": "embedded SkeletonData JSON from Cocos import"
-      },
-      "atlas": {
-        "file": "adult.atlas",
-        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/import/0a/0a1b5ff1c.95852.json",
-        "sha256": "f3d2adc48746492931e34f3ea619063f787a39d976f09940c16d7f3084e88f95"
-      },
-      "texture": {
-        "file": "adult.png",
-        "url": "https://cdn-resource.nqf.qq.com/release/remote/petdog/native/ca/ca3d54ba-7afe-4530-a40d-1a9373caad6a.fceb6.png",
-        "sha256": "8ef363ea41de119b1421a61fb0c1345d9a6672badf942f0ede079abfdc5a6b0c",
-        "bytes": 695936
-      },
-      "textureAlpha": {
-        "source": "premultiplied",
-        "decode": "createImageBitmap with premultiplyAlpha: none and colorSpaceConversion: none",
-        "upload": "PIXI.ALPHA_MODES.PMA; preserve source RGB without a second alpha multiplication"
-      },
-      "output": {
-        "width": 448,
-        "height": 486,
-        "crop": {
-          "x": -185.065281038122,
-          "y": -350.628646433231,
-          "width": 350.67116833410967,
-          "height": 379.5293941571162
-        },
-        "fps": 12,
-        "frames": 34,
-        "durationMs": 2833,
-        "loopCount": 1,
-        "bytes": 709306
-      },
-      "composition": {
-        "room": "img_s3BattlePass_bg.png",
-        "roomSha256": "0acac24b2e5cdce4de3c9d9035a52efca3f239f3ec0d2cf07b7c3bccfcc3ad46",
-        "roomCrop": {
-          "x": 0,
-          "y": 0,
-          "width": 900,
-          "height": 1400
-        },
-        "dogPlacement": {
-          "x": 223,
-          "y": 625,
-          "width": 401,
-          "height": 434
-        },
-        "note": "The same skeleton origin and scale as the static home scene; frames are never trimmed independently."
-      },
-      "encoding": {
-        "tool": "libwebp 1.6.0 img2webp",
-        "mode": "lossy",
-        "quality": 80,
-        "method": 4,
-        "sharpYuv": true,
-        "minSize": true
-      }
     }
   }
 ]

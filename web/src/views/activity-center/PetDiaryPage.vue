@@ -1045,10 +1045,6 @@ watch(pet, (value) => {
   width: 44%;
   aspect-ratio: 363 / 226;
   background: url('/activity-assets/pet-diary/img_s3BattlePass_chatBg.png') center / contain no-repeat;
-  transition: opacity 120ms ease;
-}
-.pet-garden:has(.pet-dog-motion.ready) .pet-speech {
-  opacity: 0;
 }
 .pet-speech img {
   width: 85%;
@@ -2604,8 +2600,7 @@ watch(pet, (value) => {
 @media (prefers-reduced-motion: reduce) {
   .pet-tabs img,
   .pet-product,
-  .pet-chevron,
-  .pet-speech {
+  .pet-chevron {
     transition: none;
   }
   .pet-friend-spin {
