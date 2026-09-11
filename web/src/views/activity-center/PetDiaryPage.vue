@@ -1508,8 +1508,8 @@ watch(pet, (value) => {
 }
 .pet-friend-list {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
   max-height: 264px;
   overflow: hidden auto;
   padding: 6px;
@@ -2482,6 +2482,7 @@ watch(pet, (value) => {
     font-size: 12px;
   }
   .pet-friend-list {
+    grid-template-columns: minmax(0, 1fr);
     max-height: 236px;
   }
   .pet-preview {
