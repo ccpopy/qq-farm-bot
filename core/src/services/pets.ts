@@ -9,12 +9,14 @@ export {};
 const { getItemById, getItemImageById } = require('../config/gameConfig');
 const { getBag, getBagItems } = require('./warehouse');
 const { getDogInfo } = require('./dog-skill-gifts');
+const { getPetDiaryDogStatus, operatePetDiary } = require('./activity-center/pet-diary-runtime');
 const { sendMsgAsync } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { toNum, log, logWarn } = require('../utils/utils');
 
 const MAX_PROTECT_DURATION_SECONDS: number = 30 * 24 * 60 * 60;
 const PET_IDS: number[] = [90001, 90002, 90003, 90011, 90021, 90031];
+const BICHON_ID = 90031;
 const DOG_FOOD_DURATIONS: Map<number, number> = new Map([
     [90004, 24 * 60 * 60],
     [90005, 3 * 24 * 60 * 60],
@@ -32,7 +34,7 @@ const PET_OBTAIN_CONDITIONS: Record<number, string> = {
     90003: '商店购买：200 点券',
     90011: '商店购买：200 点券',
     90021: '限时活动获得',
-    90031: '萌宠成长日记：将比熊幼崽培育至成年后永久获得',
+    90031: '萌宠成长日记：将比熊幼崽培育至成年后可激活',
 };
 interface PetSkillDefinition {
     skillId?: number;
@@ -172,6 +174,7 @@ function getDogDefinition(id: number, raw: any, currentDogId: number, skillUsage
         level: normalizeId(raw?.level),
         status: normalizeId(raw?.status),
         owned,
+        claimable: false,
         active: id === currentDogId,
     };
 }
@@ -256,21 +259,50 @@ async function getProtectLogs(): Promise<any> {
 }
 
 async function getPetInfo(): Promise<any> {
-    const reply = await getDogInfo();
+    let reply = await getDogInfo();
+    let acquisition: any = null;
+    if (!isDogOwned(reply, BICHON_ID)) {
+        // 成年与永久获得是两个状态；只读查询不能替用户领取或更换看护宠物。
+        try {
+            acquisition = await getPetDiaryDogStatus();
+            // 活动已确认领取时再取一次宠物列表，避免跨接口更新时序留下旧状态。
+            if (acquisition.granted) reply = await getDogInfo();
+        } catch {
+            // 活动尚未开放、已结束或暂时不可读，不影响其他宠物与狗粮功能。
+        }
+    }
     // GetDogInfo.field 5 只提供狗粮种类、时长及状态。抓包已证明 field 3
     // 不是数量，因此必须读取背包才能展示与校验真实库存。
     const bagReply = await getBag();
-    return buildPetSnapshot(reply, bagReply);
+    const snapshot = buildPetSnapshot(reply, bagReply);
+    const bichon = snapshot.dogs.find((dog: any) => dog.id === BICHON_ID);
+    if (bichon && !bichon.owned && acquisition) {
+        bichon.claimable = acquisition.claimable === true;
+        if (bichon.claimable) bichon.obtainCondition = '已培育至成年，可激活为看护宠物';
+        else if (acquisition.granted) bichon.obtainCondition = '比熊已解锁，宠物状态同步中，请稍后刷新';
+    }
+    return snapshot;
+}
+
+function isDogOwned(reply: any, dogId: number): boolean {
+    const dog = getRawDogs(reply).find((entry: any) => normalizeId(entry?.id) === dogId);
+    return normalizeId(dog?.owned ?? dog?.field_7) === 1 || dogId === normalizeId(reply?.current_dog_id ?? reply?.currentDogId);
 }
 
 async function deployDog(dogIdInput: any): Promise<any> {
     const dogId = normalizeId(dogIdInput);
     if (!dogId) throw new Error('缺少宠物 ID');
 
-    const before = await getDogInfo();
+    let before = await getDogInfo();
+    if (dogId === BICHON_ID && !isDogOwned(before, dogId)) {
+        const acquisition = await getPetDiaryDogStatus();
+        if (acquisition.claimable) await operatePetDiary('claimDog');
+        else if (!acquisition.granted) throw new Error('比熊尚未成年或当前无法激活，请前往萌宠日记查看');
+        before = await getDogInfo();
+        if (!isDogOwned(before, dogId)) throw new Error('比熊激活状态尚未同步，请稍后重试');
+    }
     const dog = getRawDogs(before).find((entry: any) => normalizeId(entry?.id) === dogId);
-    const owned = normalizeId(dog?.owned ?? dog?.field_7) === 1 || dogId === normalizeId(before?.current_dog_id ?? before?.currentDogId);
-    if (!dog || !owned) throw new Error('未获得该宠物，无法上场');
+    if (!dog || !isDogOwned(before, dogId)) throw new Error('未获得该宠物，无法上场');
 
     const body: Uint8Array = types.DeployDogRequest.encode(
         types.DeployDogRequest.create({ dog_id: dogId }),

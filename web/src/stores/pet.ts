@@ -15,6 +15,7 @@ export interface PetInfo {
   level: number
   status: number
   owned: boolean
+  claimable?: boolean
   active: boolean
 }
 
