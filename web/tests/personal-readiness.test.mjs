@@ -112,7 +112,7 @@ function harness(t, get) {
 test('returning to the pet tab refreshes a grown bichon and offers activation without a page reload', async (t) => {
   let adult = false
   const { status, requests, mount } = harness(t, () => Promise.resolve({
-    data: { ok: true, data: { dogs: [{ id: 90031, owned: false, active: false, claimable: adult }] } },
+    data: { ok: true, data: { dogs: [{ id: 90031, owned: adult, active: false, activated: false, canActivate: adult }] } },
   }))
   status.status = { accountId: 'a', connection: { connected: true } }
   const { setup, props } = mount('PetPanel')
@@ -127,7 +127,7 @@ test('returning to the pet tab refreshes a grown bichon and offers activation wi
   assert.equal(requests.filter(request => request.url === '/api/pets').length, 2)
   assert.equal(setup.dogActionLabel(setup.dogs.value[0]), '激活')
   assert.equal(setup.dogActionType(setup.dogs.value[0]), 'success')
-  assert.equal(setup.dogs.value[0].owned, false)
+  assert.equal(setup.dogs.value[0].owned, true)
 })
 
 for (const [panel, endpoint] of [

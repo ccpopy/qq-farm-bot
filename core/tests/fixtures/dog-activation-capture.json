@@ -1,0 +1,319 @@
+{
+  "source": "session-1789352448379; messages captured from the user manually activating and deploying their bichon on 2026-09-14; expected fields decoded independently by the official mini-program decoder",
+  "messages": [
+    {
+      "file": "000119-recv.bin",
+      "direction": "recv",
+      "method": "GetDogInfo",
+      "hex": "0a160891bf051209e794b0e59bade78aac18e807200128640a160892bf051209e789a7e7be8ae78aac18b817200128640a180893bf051209e69691e782b9e78b971888272001286438010a13089bbf051206e69fafe59fba188827200128640a1608a5bf051209e68aa4e4b8bbe78aac188827200128640a1808afbf051209e6af94e7868ae78aac1888272001286430011093bf051881fa900120809a9e012a080894bf051080a3052a0a0895bf051080e90f18022a080896bf051080af1a3001",
+      "expected": {
+        "dog_list": [
+          {
+            "available_skins": [],
+            "id": "90001",
+            "name": "田园犬",
+            "protect_probability": "1000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90002",
+            "name": "牧羊犬",
+            "protect_probability": "3000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90003",
+            "name": "斑点狗",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100",
+            "activated": true
+          },
+          {
+            "available_skins": [],
+            "id": "90011",
+            "name": "柯基",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90021",
+            "name": "护主犬",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90031",
+            "name": "比熊犬",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100",
+            "owned": true
+          }
+        ],
+        "food_list": [
+          {
+            "id": "90004",
+            "time": "86400"
+          },
+          {
+            "id": "90005",
+            "time": "259200",
+            "own_count": "2"
+          },
+          {
+            "id": "90006",
+            "time": "432000"
+          }
+        ],
+        "skill_use_infos": [],
+        "current_deployed_dog_id": "90003",
+        "food_last_sec": "2374913",
+        "max_food_last_sec": "2592000",
+        "is_exist_new_log": true
+      }
+    },
+    {
+      "file": "000144-send.bin",
+      "direction": "send",
+      "method": "ActivateDog",
+      "hex": "08afbf05",
+      "expected": {
+        "dog_id": "90031"
+      }
+    },
+    {
+      "file": "000145-recv.bin",
+      "direction": "recv",
+      "method": "ActivateDog",
+      "hex": "0a1c08afbf051209e6af94e7868ae78aac18882720012864300138015001",
+      "expected": {
+        "dog": {
+          "available_skins": [],
+          "id": "90031",
+          "name": "比熊犬",
+          "protect_probability": "5000",
+          "lost_gold_range_min": "1",
+          "lost_gold_range_max": "100",
+          "owned": true,
+          "activated": true,
+          "is_reddot": true
+        }
+      }
+    },
+    {
+      "file": "000147-send.bin",
+      "direction": "send",
+      "method": "DeployDog",
+      "hex": "08afbf05",
+      "expected": {
+        "dog_id": "90031"
+      }
+    },
+    {
+      "file": "000148-recv.bin",
+      "direction": "recv",
+      "method": "DeployDog",
+      "hex": "08afbf051093bf05",
+      "expected": {
+        "deployed_dog_id": "90031",
+        "previous_deployed_dog_id": "90003"
+      }
+    },
+    {
+      "file": "000151-recv.bin",
+      "direction": "recv",
+      "method": "GetDogInfo",
+      "hex": "0a160891bf051209e794b0e59bade78aac18e807200128640a160892bf051209e789a7e7be8ae78aac18b817200128640a180893bf051209e69691e782b9e78b971888272001286438010a13089bbf051206e69fafe59fba188827200128640a1608a5bf051209e68aa4e4b8bbe78aac188827200128640a1a08afbf051209e6af94e7868ae78aac188827200128643801500110afbf051894f9900120809a9e012a080894bf051080a3052a0a0895bf051080e90f18022a080896bf051080af1a3001420708b91720afbf05",
+      "expected": {
+        "dog_list": [
+          {
+            "available_skins": [],
+            "id": "90001",
+            "name": "田园犬",
+            "protect_probability": "1000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90002",
+            "name": "牧羊犬",
+            "protect_probability": "3000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90003",
+            "name": "斑点狗",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100",
+            "activated": true
+          },
+          {
+            "available_skins": [],
+            "id": "90011",
+            "name": "柯基",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90021",
+            "name": "护主犬",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90031",
+            "name": "比熊犬",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100",
+            "activated": true,
+            "is_reddot": true
+          }
+        ],
+        "food_list": [
+          {
+            "id": "90004",
+            "time": "86400"
+          },
+          {
+            "id": "90005",
+            "time": "259200",
+            "own_count": "2"
+          },
+          {
+            "id": "90006",
+            "time": "432000"
+          }
+        ],
+        "skill_use_infos": [
+          {
+            "skill_id": "3001",
+            "dog_id": "90031"
+          }
+        ],
+        "current_deployed_dog_id": "90031",
+        "food_last_sec": "2374804",
+        "max_food_last_sec": "2592000",
+        "is_exist_new_log": true
+      }
+    },
+    {
+      "file": "000160-recv.bin",
+      "direction": "recv",
+      "method": "GetDogInfo",
+      "hex": "0a160891bf051209e794b0e59bade78aac18e807200128640a160892bf051209e789a7e7be8ae78aac18b817200128640a180893bf051209e69691e782b9e78b971888272001286438010a13089bbf051206e69fafe59fba188827200128640a1608a5bf051209e68aa4e4b8bbe78aac188827200128640a1808afbf051209e6af94e7868ae78aac1888272001286438011887f9900120809a9e012a080894bf051080a3052a0a0895bf051080e90f18022a080896bf051080af1a420708b91720afbf05",
+      "expected": {
+        "dog_list": [
+          {
+            "available_skins": [],
+            "id": "90001",
+            "name": "田园犬",
+            "protect_probability": "1000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90002",
+            "name": "牧羊犬",
+            "protect_probability": "3000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90003",
+            "name": "斑点狗",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100",
+            "activated": true
+          },
+          {
+            "available_skins": [],
+            "id": "90011",
+            "name": "柯基",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90021",
+            "name": "护主犬",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100"
+          },
+          {
+            "available_skins": [],
+            "id": "90031",
+            "name": "比熊犬",
+            "protect_probability": "5000",
+            "lost_gold_range_min": "1",
+            "lost_gold_range_max": "100",
+            "activated": true
+          }
+        ],
+        "food_list": [
+          {
+            "id": "90004",
+            "time": "86400"
+          },
+          {
+            "id": "90005",
+            "time": "259200",
+            "own_count": "2"
+          },
+          {
+            "id": "90006",
+            "time": "432000"
+          }
+        ],
+        "skill_use_infos": [
+          {
+            "skill_id": "3001",
+            "dog_id": "90031"
+          }
+        ],
+        "food_last_sec": "2374791",
+        "max_food_last_sec": "2592000"
+      }
+    },
+    {
+      "file": "000163-send.bin",
+      "direction": "send",
+      "method": "DeployDog",
+      "hex": "08afbf05",
+      "expected": {
+        "dog_id": "90031"
+      }
+    },
+    {
+      "file": "000164-recv.bin",
+      "direction": "recv",
+      "method": "DeployDog",
+      "hex": "08afbf05",
+      "expected": {
+        "deployed_dog_id": "90031"
+      }
+    }
+  ]
+}

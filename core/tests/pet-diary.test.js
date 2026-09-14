@@ -126,21 +126,6 @@ test('snapshot reads never claim seeds, and expose real limits and balances', as
     assert.equal(dto.shop.find(g=>g.id==='50').exchangeable,false);
 });
 
-test('pet catalog checks adulthood and permanent acquisition without shop, bag or mutation calls', async () => {
-    const h = harness({ failBag: true });
-    const nurture = h.group.pet.pet_treasure_hunt.nurture;
-    assert.deepEqual(await h.service.getPetDiaryDogStatus(), { adult: false, granted: false, claimable: false });
-    nurture.stage = 2;
-    assert.deepEqual(await h.service.getPetDiaryDogStatus(), { adult: true, granted: false, claimable: true });
-    nurture.dog_granted = true;
-    assert.deepEqual(await h.service.getPetDiaryDogStatus(), { adult: true, granted: true, claimable: false });
-    nurture.dog_granted = false;
-    h.group.pet.head.end_time = 1;
-    assert.deepEqual(await h.service.getPetDiaryDogStatus(), { adult: true, granted: false, claimable: false });
-    assert.deepEqual(h.calls, []);
-    assert.equal(h.mutations(), 0);
-});
-
 test('insufficient cake, duplicate seeds and unknown actions never issue a mutation', async () => {
     const h=harness();
     await assert.rejects(h.service.operatePetDiary('feed'),/不足/);

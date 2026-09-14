@@ -99,15 +99,15 @@ function canUseFood(food: DogFoodInfo) {
 }
 
 function operationTitle(pet: PetInfo) {
-  if (pet.claimable)
-    return '激活比熊犬并设为当前看护宠物'
+  if (pet.canActivate)
+    return `激活${pet.name}并设为当前看护宠物`
   if (!pet.owned)
     return '未获得宠物，无法操作'
   return pet.active ? '收回当前宠物' : '将该宠物上场'
 }
 
 function dogActionLabel(pet: PetInfo) {
-  if (pet.claimable)
+  if (pet.canActivate)
     return '激活'
   if (!pet.owned)
     return '未获得'
@@ -115,7 +115,7 @@ function dogActionLabel(pet: PetInfo) {
 }
 
 function dogActionType(pet: PetInfo): 'default' | 'success' | 'warning' {
-  if (pet.claimable)
+  if (pet.canActivate)
     return 'success'
   if (!pet.owned)
     return 'default'
@@ -123,13 +123,13 @@ function dogActionType(pet: PetInfo): 'default' | 'success' | 'warning' {
 }
 
 async function handlePetOperation(pet: PetInfo) {
-  if ((!pet.owned && !pet.claimable) || operatingDogId.value)
+  if ((!pet.owned && !pet.canActivate) || operatingDogId.value)
     return
   const result = pet.active
     ? await petStore.withdrawDog(currentAccountId.value, pet.id)
     : await petStore.deployDog(currentAccountId.value, pet.id)
   if (result)
-    toastStore.success(pet.active ? `已收回 ${pet.name}` : pet.claimable ? `已激活 ${pet.name}` : `已上场 ${pet.name}`)
+    toastStore.success(pet.active ? `已收回 ${pet.name}` : pet.canActivate ? `已激活 ${pet.name}` : `已上场 ${pet.name}`)
   else
     toastStore.error(error.value || (pet.active ? '收回宠物失败' : '上场宠物失败'))
 }
@@ -303,12 +303,12 @@ watch([currentAccountId, isConnected, () => props.active], loadPetInfo, { immedi
         <div class="pet-grid">
           <article
             v-for="pet in dogs" :key="pet.id" class="pet-tile"
-            :class="{ 'pet-tile--locked': !pet.owned && !pet.claimable, 'pet-tile--active': pet.active }"
+            :class="{ 'pet-tile--locked': !pet.owned && !pet.canActivate, 'pet-tile--active': pet.active }"
           >
             <div class="pet-tile__top">
-              <div class="pet-avatar" :class="{ 'pet-avatar--locked': !pet.owned && !pet.claimable }">
+              <div class="pet-avatar" :class="{ 'pet-avatar--locked': !pet.owned && !pet.canActivate }">
                 <img :src="pet.image" :alt="pet.name" loading="lazy">
-                <span v-if="!pet.owned && !pet.claimable" class="pet-avatar__lock i-carbon-locked" />
+                <span v-if="!pet.owned && !pet.canActivate" class="pet-avatar__lock i-carbon-locked" />
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2">
@@ -319,13 +319,13 @@ watch([currentAccountId, isConnected, () => props.active], loadPetInfo, { immedi
                 </div>
                 <div
                   class="pet-tile__status"
-                  :class="{ 'pet-tile__status--active': pet.active, 'pet-tile__status--owned': (pet.owned || pet.claimable) && !pet.active }"
+                  :class="{ 'pet-tile__status--active': pet.active, 'pet-tile__status--owned': (pet.owned || pet.canActivate) && !pet.active }"
                 >
                   <span
                     class="status-dot"
-                    :class="{ 'status-dot--owned': pet.owned || pet.claimable, 'status-dot--active': pet.active }"
+                    :class="{ 'status-dot--owned': pet.owned || pet.canActivate, 'status-dot--active': pet.active }"
                   />
-                  {{ pet.active ? '上场中' : pet.owned ? '已获得' : pet.claimable ? '待激活' : '未获得' }}
+                  {{ pet.active ? '上场中' : pet.canActivate ? '待激活' : pet.owned ? '已获得' : '未获得' }}
                 </div>
               </div>
             </div>
@@ -345,8 +345,8 @@ watch([currentAccountId, isConnected, () => props.active], loadPetInfo, { immedi
             </div>
             <NButton
               size="small" ghost block :type="dogActionType(pet)" class="pet-action"
-              :class="pet.active ? 'pet-action--withdraw' : ((pet.owned || pet.claimable) ? 'pet-action--deploy' : 'pet-action--locked')"
-              :loading="operatingDogId === pet.id" :disabled="(!pet.owned && !pet.claimable) || !!operatingDogId"
+              :class="pet.active ? 'pet-action--withdraw' : ((pet.owned || pet.canActivate) ? 'pet-action--deploy' : 'pet-action--locked')"
+              :loading="operatingDogId === pet.id" :disabled="(!pet.owned && !pet.canActivate) || !!operatingDogId"
               :title="operationTitle(pet)" @click="handlePetOperation(pet)"
             >
               {{ dogActionLabel(pet) }}

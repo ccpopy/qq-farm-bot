@@ -2,51 +2,82 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const test = require('node:test');
 const protobuf = require('protobufjs');
+const { messages } = require('./fixtures/dog-activation-capture.json');
 
 const root = new protobuf.Root().loadSync(path.resolve(__dirname, '../src/proto/dogpb.proto'), { keepCase: true });
-const names = ['GetDogInfoReply', 'DeployDogRequest', 'DeployDogReply'];
+const names = ['GetDogInfoReply', 'ActivateDogRequest', 'ActivateDogReply', 'DeployDogRequest', 'DeployDogReply'];
 const types = Object.fromEntries(names.map(name => [name, root.lookupType(`gamepb.dogpb.${name}`)]));
-const decodeDog = value => types.GetDogInfoReply.decode(types.GetDogInfoReply.encode(types.GetDogInfoReply.fromObject(value)).finish());
+const fixture = file => messages.find(entry => entry.file === file);
+const bytes = file => Buffer.from(fixture(file).hex, 'hex');
+const encode = (name, value) => types[name].encode(types[name].fromObject(value)).finish();
+const object = (name, value) => types[name].toObject(types[name].decode(value), { longs: String, arrays: true });
 
-function harness(t, { adult = true, granted = false, owned = false, failActivity = false, failClaim = false, delayOwnership = false } = {}) {
+// Keep the service's historical outer-field aliases, but compare every decoded
+// field with the independently extracted official decoder, not message lengths.
+function officialFields(name, decoded) {
+    if (name === 'GetDogInfoReply') {
+        const { dogs, items, skill_usages, current_dog_id, protect_time, max_protect_time, ...rest } = decoded;
+        return {
+            ...rest,
+            dog_list: dogs,
+            food_list: items.map(({ duration, ...item }) => ({ ...item, ...(duration !== undefined ? { time: duration } : {}) })),
+            skill_use_infos: skill_usages,
+            ...(current_dog_id !== undefined ? { current_deployed_dog_id: current_dog_id } : {}),
+            ...(protect_time !== undefined ? { food_last_sec: protect_time } : {}),
+            ...(max_protect_time !== undefined ? { max_food_last_sec: max_protect_time } : {}),
+        };
+    }
+    if (name === 'DeployDogReply') {
+        const { dog_id, ...rest } = decoded;
+        return { ...rest, ...(dog_id !== undefined ? { deployed_dog_id: dog_id } : {}) };
+    }
+    return decoded;
+}
+
+test('real activation, deployment and dog-list replies match every official decoded field', () => {
+    for (const capture of messages) {
+        const name = capture.method + (capture.direction === 'send' ? 'Request' : 'Reply');
+        const wire = Buffer.from(capture.hex, 'hex');
+        const decoded = object(name, wire);
+        assert.deepEqual(officialFields(name, decoded), capture.expected, capture.file);
+        if (capture.direction === 'send') assert.deepEqual(Buffer.from(encode(name, capture.expected)), wire, capture.file);
+    }
+});
+
+function harness(t, { beforeFile = '000119-recv.bin', bagItems = [], bagOnly = false, activationError = '', activationReply, deployError = '' } = {}) {
     const gifts = require('../dist/services/dog-skill-gifts');
-    const diary = require('../dist/services/activity-center/pet-diary-runtime');
     const warehouse = require('../dist/services/warehouse');
     const network = require('../dist/utils/network');
     const proto = require('../dist/utils/proto');
     const calls = [];
-    let active = 90003;
-    let pendingOwnership = granted && !owned;
+    let dogBytes = bytes(beforeFile);
+    if (bagOnly) {
+        // Synthetic edge case matching the official bag-item fallback.
+        const before = object('GetDogInfoReply', dogBytes);
+        before.dogs.find(dog => dog.id === '90031').owned = false;
+        dogBytes = encode('GetDogInfoReply', before);
+    }
     t.mock.method(gifts, 'getDogInfo', async () => {
         calls.push('GetDogInfo');
-        const reply = decodeDog({ current_dog_id: active, dogs: [{ id: 90003, owned: 1 }, { id: 90031, status: 1, owned: owned ? 1 : 0 }] });
-        if (pendingOwnership) { owned = true; pendingOwnership = false; }
-        return reply;
-    });
-    t.mock.method(diary, 'getPetDiaryDogStatus', async () => {
-        calls.push('GetGroup');
-        if (failActivity) throw new Error('activity unavailable');
-        return { adult, granted, claimable: adult && !granted };
-    });
-    t.mock.method(diary, 'operatePetDiary', async (action) => {
-        calls.push(action);
-        assert.equal(action, 'claimDog');
-        if (failClaim) throw new Error('claim failed');
-        granted = true;
-        if (!delayOwnership) owned = true;
-        return { action };
+        return types.GetDogInfoReply.decode(dogBytes);
     });
     t.mock.method(warehouse, 'getBag', async () => {
         calls.push('Bag');
-        return { item_bag: { items: [] } };
+        return { item_bag: { items: bagItems } };
     });
     t.mock.method(network, 'sendMsgAsync', async (service, method, body) => {
         calls.push(method);
         assert.equal(service, 'gamepb.dogpb.DogService');
-        assert.equal(method, 'DeployDog');
-        active = Number(types.DeployDogRequest.decode(body).dog_id);
-        assert.ok(active === 90003 || (active === 90031 && owned));
-        return { body: types.DeployDogReply.encode(types.DeployDogReply.fromObject({ dog_id: active })).finish() };
+        if (method === 'ActivateDog') {
+            assert.deepEqual(Buffer.from(body), bytes('000144-send.bin'));
+            if (activationError) throw new Error(activationError);
+            return { body: activationReply === undefined ? bytes('000145-recv.bin') : encode('ActivateDogReply', activationReply) };
+        }
+        assert.equal(method, 'DeployDog'); // No activity claim, purchase or resource spend is allowed.
+        assert.deepEqual(Buffer.from(body), bytes('000147-send.bin'));
+        if (deployError) throw new Error(deployError);
+        dogBytes = bytes('000151-recv.bin');
+        return { body: bytes('000148-recv.bin') };
     });
     const savedTypes = { ...proto.types };
     Object.assign(proto.types, types);
@@ -64,69 +95,74 @@ function harness(t, { adult = true, granted = false, owned = false, failActivity
     return { pets: require(modulePath), calls };
 }
 
-test('adult bichon is available for activation while a catalog read never claims or deploys it', async (t) => {
+test('the real pre-activation bichon is owned and can activate without changing the current guard', async (t) => {
     const { pets, calls } = harness(t);
     const snapshot = await pets.getPetInfo();
     const dog = snapshot.dogs.find(dog => dog.id === 90031);
-    assert.equal(dog.owned, false);
-    assert.equal(dog.claimable, true);
+    assert.equal(dog.owned, true);
+    assert.equal(dog.activated, false);
+    assert.equal(dog.canActivate, true);
     assert.equal(dog.active, false);
     assert.equal(snapshot.activeDogId, 90003);
-    assert.deepEqual(calls, ['GetDogInfo', 'GetGroup', 'Bag']);
+    assert.equal(snapshot.dogs.filter(dog => dog.owned).length, 2);
+    assert.deepEqual(calls, ['GetDogInfo', 'Bag']);
 });
 
-test('one activation claims the adult bichon, verifies ownership and deploys it', async (t) => {
+test('one click replays ActivateDog then DeployDog and the real final pet-list reply', async (t) => {
     const { pets, calls } = harness(t);
     const snapshot = await pets.deployDog(90031);
+    const dog = snapshot.dogs.find(dog => dog.id === 90031);
     assert.equal(snapshot.activeDogId, 90031);
-    assert.equal(snapshot.dogs.find(dog => dog.id === 90031).owned, true);
-    assert.equal(snapshot.dogs.find(dog => dog.id === 90031).claimable, false);
-    assert.deepEqual(calls, ['GetDogInfo', 'GetGroup', 'claimDog', 'GetDogInfo', 'DeployDog', 'GetDogInfo', 'Bag']);
+    assert.equal(dog.owned, true);
+    assert.equal(dog.activated, true);
+    assert.equal(dog.canActivate, false);
+    assert.equal(dog.active, true);
+    assert.deepEqual(calls, ['GetDogInfo', 'ActivateDog', 'DeployDog', 'GetDogInfo', 'Bag']);
     await pets.deployDog(90031);
-    assert.equal(calls.filter(call => call === 'claimDog').length, 1);
+    assert.equal(calls.filter(call => call === 'ActivateDog').length, 1);
 });
 
-test('an already granted bichon refreshes the pet list without repeating acquisition', async (t) => {
-    const { pets, calls } = harness(t, { granted: true });
-    const snapshot = await pets.getPetInfo();
-    assert.equal(snapshot.dogs.find(dog => dog.id === 90031).owned, true);
-    assert.deepEqual(calls, ['GetDogInfo', 'GetGroup', 'GetDogInfo', 'Bag']);
-    await pets.deployDog(90031);
-    assert.equal(calls.includes('claimDog'), false);
+test('the real withdrawn bichon remains owned after the consumed owned flag disappears', async (t) => {
+    const { pets, calls } = harness(t, { beforeFile: '000160-recv.bin' });
+    const dog = (await pets.getPetInfo()).dogs.find(dog => dog.id === 90031);
+    assert.equal(dog.owned, true);
+    assert.equal(dog.activated, true);
+    assert.equal(dog.active, false);
+    assert.equal(dog.canActivate, false);
+    assert.equal((await pets.deployDog(90031)).activeDogId, 90031);
+    assert.equal(calls.includes('ActivateDog'), false);
 });
 
-test('an infant bichon stays locked and cannot issue an acquisition or deploy request', async (t) => {
-    const { pets, calls } = harness(t, { adult: false });
-    assert.equal((await pets.getPetInfo()).dogs.find(dog => dog.id === 90031).claimable, false);
-    await assert.rejects(pets.deployDog(90031), /尚未成年/);
-    assert.equal(calls.includes('claimDog'), false);
-    assert.equal(calls.includes('DeployDog'), false);
+test('a bag pet item allows activation just like the official client, without claiming the activity again', async (t) => {
+    const { pets, calls } = harness(t, { bagOnly: true, bagItems: [{ id: 90031, count: 1 }] });
+    assert.equal((await pets.getPetInfo()).dogs.find(dog => dog.id === 90031).canActivate, true);
+    assert.equal((await pets.deployDog(90031)).activeDogId, 90031);
+    assert.equal(calls.filter(call => call === 'ActivateDog').length, 1);
 });
 
-test('claim failure or missing ownership confirmation never changes the current guard dog', async (t) => {
-    for (const option of [{ failClaim: true }, { delayOwnership: true }]) {
+test('unowned pets stay locked and never trigger activation, purchases or deployment', async (t) => {
+    const { pets, calls } = harness(t, { bagOnly: true });
+    const dog = (await pets.getPetInfo()).dogs.find(dog => dog.id === 90031);
+    assert.equal(dog.owned, false);
+    assert.equal(dog.canActivate, false);
+    await assert.rejects(pets.deployDog(90031), /未获得/);
+    await assert.rejects(pets.deployDog(90002), /未获得/);
+    await assert.rejects(pets.deployDog(1028), /未获得/);
+    assert.ok(calls.every(call => ['GetDogInfo', 'Bag'].includes(call)));
+});
+
+test('failed or mismatched activation replies do not attempt to deploy a pet', async (t) => {
+    for (const option of [{ activationError: 'activation rejected' }, { activationReply: {} }, { activationReply: { dog: { id: 90031, activated: false } } }, { activationReply: { dog: { id: 90021, activated: true } } }]) {
         await t.test(JSON.stringify(option), async (child) => {
             const { pets, calls } = harness(child, option);
-            await assert.rejects(pets.deployDog(90031), /claim failed|尚未同步/);
+            await assert.rejects(pets.deployDog(90031), /activation rejected|未确认成功/);
             assert.equal(calls.includes('DeployDog'), false);
         });
     }
 });
 
-test('unavailable activity data does not break existing pets or grant a locked pet', async (t) => {
-    const { pets, calls } = harness(t, { failActivity: true });
-    const snapshot = await pets.getPetInfo();
-    assert.equal(snapshot.activeDogId, 90003);
-    assert.equal(snapshot.dogs.find(dog => dog.id === 90031).claimable, false);
-    await assert.rejects(pets.deployDog(90002), /未获得/);
-    assert.equal(calls.includes('claimDog'), false);
-    assert.equal((await pets.deployDog(90003)).activeDogId, 90003);
-});
-
-test('an owned bichon works after the activity ends without reading activity data', async (t) => {
-    const { pets, calls } = harness(t, { owned: true, failActivity: true });
-    assert.equal((await pets.getPetInfo()).dogs.find(dog => dog.id === 90031).owned, true);
-    assert.equal((await pets.deployDog(90031)).activeDogId, 90031);
-    assert.equal(calls.includes('GetGroup'), false);
-    assert.equal(calls.includes('claimDog'), false);
+test('a deployment rejection after activation is surfaced instead of claiming success', async (t) => {
+    const { pets, calls } = harness(t, { deployError: 'deploy rejected' });
+    await assert.rejects(pets.deployDog(90031), /deploy rejected/);
+    assert.deepEqual(calls, ['GetDogInfo', 'ActivateDog', 'DeployDog']);
 });

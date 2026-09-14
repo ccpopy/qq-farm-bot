@@ -3,20 +3,18 @@ export {};
 /**
  * 宠物信息与狗粮使用。
  *
- * GetDogInfo、DeployDog、WithdrawDog 和 DogService.AddFood 均有真实抓包依据。
+ * GetDogInfo、ActivateDog、DeployDog、WithdrawDog 和 DogService.AddFood 均有真实抓包依据。
  * 守护记录 GetProtectLogs 也已由游戏页面实际点击抓包确认。
  */
 const { getItemById, getItemImageById } = require('../config/gameConfig');
 const { getBag, getBagItems } = require('./warehouse');
 const { getDogInfo } = require('./dog-skill-gifts');
-const { getPetDiaryDogStatus, operatePetDiary } = require('./activity-center/pet-diary-runtime');
 const { sendMsgAsync } = require('../utils/network');
 const { types } = require('../utils/proto');
 const { toNum, log, logWarn } = require('../utils/utils');
 
 const MAX_PROTECT_DURATION_SECONDS: number = 30 * 24 * 60 * 60;
 const PET_IDS: number[] = [90001, 90002, 90003, 90011, 90021, 90031];
-const BICHON_ID = 90031;
 const DOG_FOOD_DURATIONS: Map<number, number> = new Map([
     [90004, 24 * 60 * 60],
     [90005, 3 * 24 * 60 * 60],
@@ -141,23 +139,26 @@ function getPetSkills(id: number, info: any, skillUsages: any[]): PetSkillDefini
     });
 }
 
-function getBagFoodCounts(bagReply: any): Map<number, number> {
+function getBagItemCounts(bagReply: any): Map<number, number> {
     const counts = new Map<number, number>();
     for (const item of getBagItems(bagReply)) {
         const id = normalizeId(item?.id);
-        if (!DOG_FOOD_DURATIONS.has(id)) continue;
         const count = Math.max(0, normalizeId(item?.count));
         counts.set(id, (counts.get(id) || 0) + count);
     }
     return counts;
 }
 
-function getDogDefinition(id: number, raw: any, currentDogId: number, skillUsages: any[]): any {
+function getDogDefinition(id: number, raw: any, currentDogId: number, skillUsages: any[], bagCounts: Map<number, number>): any {
     const info: any = getItemById(id) || {};
     const price = normalizeId(raw?.price);
     const rarity = normalizeId(info?.rarity);
     const obtainCondition = PET_OBTAIN_CONDITIONS[id] || '游戏内活动或购买获得';
-    const owned = normalizeId(raw?.owned ?? raw?.field_7) === 1 || id === currentDogId;
+    // 第 6 位表示持有待激活宠物，第 7 位表示已激活；上场后 owned 可以归零。
+    // 小程序还使用背包中同 ID 的宠物道具作为待激活依据。
+    const activated = normalizeId(raw?.activated) === 1 || id === currentDogId;
+    const canActivate = !activated && (normalizeId(raw?.owned) === 1 || (bagCounts.get(id) || 0) > 0);
+    const owned = activated || canActivate;
 
     const skills = getPetSkills(id, info, skillUsages);
 
@@ -172,9 +173,10 @@ function getDogDefinition(id: number, raw: any, currentDogId: number, skillUsage
         obtainCondition,
         price,
         level: normalizeId(raw?.level),
-        status: normalizeId(raw?.status),
+        status: id === currentDogId ? 2 : activated ? 1 : 0,
         owned,
-        claimable: false,
+        activated,
+        canActivate,
         active: id === currentDogId,
     };
 }
@@ -183,16 +185,16 @@ function buildPetSnapshot(reply: any, bagReply: any): any {
     const rawDogs = getRawDogs(reply);
     const skillUsages = getRawSkillUsages(reply);
     const currentDogId = normalizeId(reply?.current_dog_id ?? reply?.currentDogId);
+    const bagCounts = getBagItemCounts(bagReply);
     const byId = new Map<number, any>(rawDogs.map((dog: any) => [normalizeId(dog?.id), dog]));
-    const dogs = PET_IDS.map((id: number) => getDogDefinition(id, byId.get(id) || {}, currentDogId, skillUsages));
+    const dogs = PET_IDS.map((id: number) => getDogDefinition(id, byId.get(id) || {}, currentDogId, skillUsages, bagCounts));
 
     // 保留服务端新增的宠物，避免客户端配置尚未更新时静默丢失数据。
     for (const raw of rawDogs) {
         const id = normalizeId(raw?.id);
-        if (id > 0 && !PET_IDS.includes(id)) dogs.push(getDogDefinition(id, raw, currentDogId, skillUsages));
+        if (id > 0 && !PET_IDS.includes(id)) dogs.push(getDogDefinition(id, raw, currentDogId, skillUsages, bagCounts));
     }
 
-    const bagCounts = getBagFoodCounts(bagReply);
     const rawFoodById = new Map<number, any>(getRawFoods(reply).map((food: any) => [normalizeId(food?.id), food]));
     const foods = Array.from(DOG_FOOD_DURATIONS.entries()).map(([id, fallbackDuration]) => {
         const raw = rawFoodById.get(id) || {};
@@ -202,7 +204,7 @@ function buildPetSnapshot(reply: any, bagReply: any): any {
             name: String(info?.name || `狗粮#${id}`),
             image: getItemImageById(id),
             duration: Math.max(1, normalizeId(raw?.duration) || fallbackDuration),
-            // GetDogInfo.items.field 3 是状态位，不是数量；背包是库存的唯一依据。
+            // 与背包页面和使用狗粮的校验共用库存，避免两个接口的快照时序不同。
             count: Math.max(0, bagCounts.get(id) || 0),
         };
     });
@@ -259,50 +261,31 @@ async function getProtectLogs(): Promise<any> {
 }
 
 async function getPetInfo(): Promise<any> {
-    let reply = await getDogInfo();
-    let acquisition: any = null;
-    if (!isDogOwned(reply, BICHON_ID)) {
-        // 成年与永久获得是两个状态；只读查询不能替用户领取或更换看护宠物。
-        try {
-            acquisition = await getPetDiaryDogStatus();
-            // 活动已确认领取时再取一次宠物列表，避免跨接口更新时序留下旧状态。
-            if (acquisition.granted) reply = await getDogInfo();
-        } catch {
-            // 活动尚未开放、已结束或暂时不可读，不影响其他宠物与狗粮功能。
-        }
-    }
-    // GetDogInfo.field 5 只提供狗粮种类、时长及状态。抓包已证明 field 3
-    // 不是数量，因此必须读取背包才能展示与校验真实库存。
+    const reply = await getDogInfo();
+    // 同步背包中的待激活宠物道具和狗粮库存，与小程序的激活条件一致。
     const bagReply = await getBag();
-    const snapshot = buildPetSnapshot(reply, bagReply);
-    const bichon = snapshot.dogs.find((dog: any) => dog.id === BICHON_ID);
-    if (bichon && !bichon.owned && acquisition) {
-        bichon.claimable = acquisition.claimable === true;
-        if (bichon.claimable) bichon.obtainCondition = '已培育至成年，可激活为看护宠物';
-        else if (acquisition.granted) bichon.obtainCondition = '比熊已解锁，宠物状态同步中，请稍后刷新';
-    }
-    return snapshot;
-}
-
-function isDogOwned(reply: any, dogId: number): boolean {
-    const dog = getRawDogs(reply).find((entry: any) => normalizeId(entry?.id) === dogId);
-    return normalizeId(dog?.owned ?? dog?.field_7) === 1 || dogId === normalizeId(reply?.current_dog_id ?? reply?.currentDogId);
+    return buildPetSnapshot(reply, bagReply);
 }
 
 async function deployDog(dogIdInput: any): Promise<any> {
     const dogId = normalizeId(dogIdInput);
     if (!dogId) throw new Error('缺少宠物 ID');
 
-    let before = await getDogInfo();
-    if (dogId === BICHON_ID && !isDogOwned(before, dogId)) {
-        const acquisition = await getPetDiaryDogStatus();
-        if (acquisition.claimable) await operatePetDiary('claimDog');
-        else if (!acquisition.granted) throw new Error('比熊尚未成年或当前无法激活，请前往萌宠日记查看');
-        before = await getDogInfo();
-        if (!isDogOwned(before, dogId)) throw new Error('比熊激活状态尚未同步，请稍后重试');
-    }
+    const before = await getDogInfo();
     const dog = getRawDogs(before).find((entry: any) => normalizeId(entry?.id) === dogId);
-    if (!dog || !isDogOwned(before, dogId)) throw new Error('未获得该宠物，无法上场');
+    if (!dog) throw new Error('未获得该宠物，无法上场');
+    const currentDogId = normalizeId(before?.current_dog_id ?? before?.currentDogId);
+    let state = getDogDefinition(dogId, dog, currentDogId, [], new Map());
+    if (!state.owned) state = getDogDefinition(dogId, dog, currentDogId, [], getBagItemCounts(await getBag()));
+    if (!state.owned) throw new Error('未获得该宠物，无法上场');
+    if (state.canActivate) {
+        const request = types.ActivateDogRequest.create({ dog_id: dogId });
+        const { body: activationBody } = await sendMsgAsync('gamepb.dogpb.DogService', 'ActivateDog', types.ActivateDogRequest.encode(request).finish());
+        const activation = types.ActivateDogReply.decode(activationBody);
+        if (normalizeId(activation.dog?.id) !== dogId || normalizeId(activation.dog?.activated) !== 1) {
+            throw new Error('宠物激活响应未确认成功，请刷新后重试');
+        }
+    }
 
     const body: Uint8Array = types.DeployDogRequest.encode(
         types.DeployDogRequest.create({ dog_id: dogId }),

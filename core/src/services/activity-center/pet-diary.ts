@@ -172,14 +172,6 @@ function createPetDiaryService(deps: any) {
         pendingRead = readSnapshot().finally(() => { pendingRead = null; });
         return pendingRead;
     }
-    async function getPetDiaryDogStatus() {
-        // 宠物页只需核对养成与领取状态，不读取商城、背包或触发领取。
-        const group = await readGroup();
-        const nurture = group.pet.pet_treasure_hunt.nurture || {};
-        const adult = num(nurture.stage) === 2;
-        const granted = nurture.dog_granted === true;
-        return { adult, granted, claimable: isActive(group.pet.head) && adult && !granted };
-    }
     async function getPetDiaryRecords(kind: unknown) {
         if (kind !== 'interact' && kind !== 'plunder') fail('未知记录类型');
         const selector = kind === 'interact' ? 'pet_treasure_hunt_get_log' : 'pet_treasure_hunt_get_plundered_log';
@@ -305,7 +297,7 @@ function createPetDiaryService(deps: any) {
             return { action: 'solar', rewards: items(reply.rewards), snapshot, refreshError, message: '节令好礼领取成功' };
         });
     }
-    return { getPetDiary, getPetDiaryDogStatus, operatePetDiary, getPetDiaryRecords, getPetDiaryFriend, normalize };
+    return { getPetDiary, operatePetDiary, getPetDiaryRecords, getPetDiaryFriend, normalize };
 }
 
 module.exports = { createPetDiaryService, OPERATIONS };
