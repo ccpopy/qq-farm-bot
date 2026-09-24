@@ -250,13 +250,18 @@ onUnmounted(() => {
 }
 .currency-balance {
   display: grid;
-  grid-template-columns: 30px auto auto;
-  gap: 6px;
+  grid-template-columns: 36px auto auto;
+  gap: 8px;
   align-items: center;
   padding: 3px 9px 3px 3px;
   border: 1px solid var(--ui-border);
   border-radius: 10px;
   background: var(--ui-surface);
+}
+.currency-balance :deep(.item-image) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .currency-balance span {
   color: var(--ui-muted);
