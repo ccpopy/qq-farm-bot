@@ -72,6 +72,7 @@ export const useCommerceStore = defineStore('commerce', () => {
   const notice = ref('')
   let requestVersion = 0
   let mallAccountId = ''
+  let mysteryAccountId = ''
 
   function isCurrent(version: number, accountId: string) {
     return version === requestVersion && String(localStorage.getItem('current_account_id') || '') === accountId
@@ -87,7 +88,9 @@ export const useCommerceStore = defineStore('commerce', () => {
     mall.value = null
     mystery.value = null
     mallAccountId = ''
+    mysteryAccountId = ''
     mallLoading.value = false
+    mysteryLoading.value = false
     purchasingGoodsId.value = null
     mysteryPurchasing.value = false
     clearMessages()
@@ -131,6 +134,7 @@ export const useCommerceStore = defineStore('commerce', () => {
     if (mallAccountId !== id || mall.value?.slotType !== slotType) mall.value = null
     mallAccountId = id
     mallLoading.value = true
+    mysteryLoading.value = false
     clearMessages()
     try {
       const response = await api.get('/api/game-mall', {
@@ -209,7 +213,10 @@ export const useCommerceStore = defineStore('commerce', () => {
       return
     }
     const version = ++requestVersion
+    if (mysteryAccountId !== id) mystery.value = null
+    mysteryAccountId = id
     mysteryLoading.value = true
+    mallLoading.value = false
     clearMessages()
     try {
       const response = await api.get('/api/mystery-shop', {
