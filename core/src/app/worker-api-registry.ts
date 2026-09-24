@@ -156,8 +156,12 @@ function createWorkerApiRegistry(context: WorkerApiContext): Map<string, WorkerA
     register('useWeatherCloudBottle', ([friendGid, landId]) => activity.useWeatherCloudBottle(friendGid, landId));
     register('advanceWeatherResearch', ([nodeId]) => activity.advanceWeatherResearch(nodeId));
 
+    const autumn = require('../services/autumn-activities');
+    register('getAutumnActivity', ([key]) => autumn.getAutumnActivity(key));
+    register('operateAutumnActivity', ([key, action, input]) => autumn.operateAutumnActivity(key, action, input));
+
     register('getMallCatalog', ([slotType, subSlotType]) => commerce.getMallCatalog(slotType, subSlotType));
-    register('purchaseMallProduct', ([goodsId, count]) => commerce.purchaseMallProduct(goodsId, count));
+    register('purchaseMallProduct', ([goodsId, count, slotType, expectedPrice]) => commerce.purchaseMallProduct(goodsId, count, slotType, expectedPrice));
     register('getMysteryShop', () => commerce.getMysteryShop());
     register('purchaseMysteryOffer', ([npcId]) => commerce.purchaseMysteryOffer(npcId));
     register('getSchedulers', () => context.getSchedulers(), { execution: 'direct' });

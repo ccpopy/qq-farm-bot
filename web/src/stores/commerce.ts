@@ -23,6 +23,7 @@ export interface MallGoodsDto {
   type: number
   rewards: CommerceItemDto[]
   price: CommerceItemDto & { balance: number | null }
+  originalPrice?: number | null
   isFree: boolean
   limit: PurchaseLimitDto | null
   isLimited: boolean
@@ -31,9 +32,11 @@ export interface MallGoodsDto {
   discountEndTime: number
   available: boolean
   purchasable: boolean
+  unavailableReason?: string
 }
 
 export interface MallCatalogDto {
+  membership?: { isSvip: boolean, remainingDays: number } | null
   slotType: number
   subSlotType: number
   serverTime: number
@@ -68,6 +71,7 @@ export const useCommerceStore = defineStore('commerce', () => {
   const error = ref('')
   const notice = ref('')
   let requestVersion = 0
+  let mallAccountId = ''
 
   function isCurrent(version: number, accountId: string) {
     return version === requestVersion && String(localStorage.getItem('current_account_id') || '') === accountId
@@ -82,6 +86,8 @@ export const useCommerceStore = defineStore('commerce', () => {
     requestVersion++
     mall.value = null
     mystery.value = null
+    mallAccountId = ''
+    mallLoading.value = false
     purchasingGoodsId.value = null
     mysteryPurchasing.value = false
     clearMessages()
@@ -115,19 +121,21 @@ export const useCommerceStore = defineStore('commerce', () => {
     }
   }
 
-  async function fetchMall(accountId: string) {
+  async function fetchMall(accountId: string, slotType = 1) {
     const id = String(accountId || '').trim()
     if (!id) {
       reset()
       return
     }
     const version = ++requestVersion
+    if (mallAccountId !== id || mall.value?.slotType !== slotType) mall.value = null
+    mallAccountId = id
     mallLoading.value = true
     clearMessages()
     try {
       const response = await api.get('/api/game-mall', {
         headers: { 'x-account-id': id },
-        params: { slotType: 1, subSlotType: 0 },
+        params: { slotType, subSlotType: 1 },
         skipErrorToast: true,
       } as any)
       if (!isCurrent(version, id))
@@ -155,11 +163,15 @@ export const useCommerceStore = defineStore('commerce', () => {
     const id = String(accountId || '').trim()
     if (!id || purchasingGoodsId.value !== null)
       return false
+    const slotType = mall.value?.slotType || 1
+    const version = requestVersion
     purchasingGoodsId.value = goods.id
     clearMessages()
     try {
       const response = await api.post('/api/game-mall/purchase', {
         goodsId: goods.id,
+        expectedPrice: { id: goods.price.id, count: goods.price.count },
+        slotType,
         count,
       }, {
         headers: { 'x-account-id': id },
@@ -169,15 +181,15 @@ export const useCommerceStore = defineStore('commerce', () => {
         throw new Error(response.data?.error || '购买失败')
       if (String(localStorage.getItem('current_account_id') || '') !== id)
         return false
-      const catalog = response.data.data.catalog as MallCatalogDto
-      await mergeDiamondBalance(id, catalog)
+      const catalog = response.data.data.catalog as MallCatalogDto | null
+      if (catalog) await mergeDiamondBalance(id, catalog)
       if (String(localStorage.getItem('current_account_id') || '') !== id)
         return false
-      mall.value = catalog
+      if (version === requestVersion) mall.value = catalog
       const rewards = (response.data.data.purchase?.rewards || [])
         .map((item: CommerceItemDto) => `${item.name} x${item.count}`)
         .join('、')
-      notice.value = rewards ? `购买成功：${rewards}` : '购买成功'
+      notice.value = (rewards ? `购买成功：${rewards}` : '购买成功') + (!catalog ? '；请刷新商城确认最新状态' : '')
       return true
     }
     catch (cause: any) {

@@ -24,8 +24,8 @@ const {
 } = require('../../tools/analyze-keepalive-capture');
 
 test('default client version has a release timestamp', () => {
-    assert.equal(DEFAULT_CLIENT_VERSION, '1.14.0.1_20260909');
-    assert.equal(DEFAULT_CLIENT_VERSION_UPDATED_AT, 1789004223123);
+    assert.equal(DEFAULT_CLIENT_VERSION, '1.14.2.11_20260922');
+    assert.equal(DEFAULT_CLIENT_VERSION_UPDATED_AT, 1790215551955);
 });
 
 test('newer timestamp wins when resolving the client version', () => {

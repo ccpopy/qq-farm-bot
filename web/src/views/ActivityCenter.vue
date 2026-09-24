@@ -17,6 +17,7 @@ import { WeatherActivityView } from '@/components/activity/gameplays/weather'
 import { useAccountStore } from '@/stores/account'
 import { useActivityCenterStore } from '@/stores/activity-center'
 import { useFriendStore } from '@/stores/friend'
+import AutumnActivityPage from './activity-center/AutumnActivityPage.vue'
 import PetDiaryPage from './activity-center/PetDiaryPage.vue'
 
 const router = useRouter()
@@ -207,7 +208,7 @@ async function openActivity(activity: ActivityDirectoryItemDto) {
   if (gameplay.module.key === 'stellar')
     activeTab.value = gameplay.entryTab as ActivityTab
   selectedActivity.value = gameplay.module.key
-  if (gameplay.module.key === 'pet')
+  if (['pet', 'wish', 'happy'].includes(gameplay.module.key))
     return
   const detailsLoaded = await activityStore.loadDetails(accountId(), gameplay.module.key)
   if (gameplay.module.key === 'qixi' && currentAccountId.value) {
@@ -405,7 +406,7 @@ onUnmounted(() => {
         @click="openActivity(activity)"
       >
         <span class="activity-entry__topline">
-          <span class="activity-entry__icon"><img v-if="activity.gameplayKey === 'pet'" src="/activity-assets/pet-diary/S3Open_dog_1.png" alt="" style="width: 36px; height: 36px; object-fit: contain"><span v-else class="i-carbon-calendar" /></span>
+          <span class="activity-entry__icon"><img v-if="activity.gameplayKey === 'pet'" src="/activity-assets/pet-diary/S3Open_dog_1.png" alt="" style="width: 36px; height: 36px; object-fit: contain"><img v-else-if="['wish', 'happy'].includes(activity.gameplayKey || '')" :src="`/activity-assets/autumn/${activity.gameplayKey}.png`" alt="" width="36" height="36" style="object-fit: contain"><span v-else class="i-carbon-calendar" /></span>
           <span class="activity-entry__status">{{ activityStatusLabel(activity) }}</span>
         </span>
         <strong>{{ activity.gameplayKey === 'pet' ? '萌宠日记' : activity.name }}</strong>
@@ -420,6 +421,8 @@ onUnmounted(() => {
       </button>
     </div>
   </section>
+
+  <AutumnActivityPage v-else-if="selectedActivity === 'wish' || selectedActivity === 'happy'" :kind="selectedActivity" @back="selectedActivity = null" />
 
   <PetDiaryPage v-else-if="selectedActivity === 'pet'" @back="selectedActivity = null" />
 

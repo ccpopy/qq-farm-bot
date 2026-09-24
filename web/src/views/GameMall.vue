@@ -17,6 +17,7 @@ const toast = useToastStore()
 const route = useRoute()
 const { currentAccountId } = storeToRefs(accountStore)
 const { mall, mallLoading, purchasingGoodsId, error, notice } = storeToRefs(commerceStore)
+const slotType = ref(1)
 const selected = ref<MallGoodsDto | null>(null)
 const filter = ref<FilterKey>(route.query.category === 'pet-diary' ? 'activity' : 'all')
 const query = ref('')
@@ -29,7 +30,7 @@ const filters: Array<{ key: FilterKey, label: string }> = [
   { key: 'discount', label: '折扣' },
   { key: 'fertilizer', label: '化肥' },
   { key: 'pet', label: '狗粮' },
-  { key: 'activity', label: '萌宠成长日记' },
+  { key: 'activity', label: '活动限定' },
 ]
 
 const filteredGoods = computed(() => {
@@ -47,7 +48,7 @@ const filteredGoods = computed(() => {
     if (filter.value === 'pet')
       return names.includes('狗粮')
     if (filter.value === 'activity')
-      return goods.rewards.some(item => [1028, 1029, 1030, 80101, 80102, 80103, 90031, 90032, 90033, 90034, 90041, 29004, 101305].includes(Number(item.id)))
+      return goods.isDiscounted || goods.rewards.some(item => [1028, 1029, 1030, 80101, 80102, 80103, 90031, 90032, 90033, 90034, 90041, 29004, 101305, 101613, 6001, 6002, 26030, 90042].includes(Number(item.id)))
     return true
   })
 })
@@ -63,7 +64,7 @@ const refreshRemaining = computed(() => {
 })
 
 function load() {
-  commerceStore.fetchMall(String(currentAccountId.value || ''))
+  commerceStore.fetchMall(String(currentAccountId.value || ''), slotType.value)
 }
 
 function choose(goods: MallGoodsDto) {
@@ -85,6 +86,7 @@ async function purchase(count: number) {
   }
 }
 
+watch(slotType, () => { selected.value = null; filter.value = 'all'; load() })
 watch(currentAccountId, () => {
   selected.value = null
   load()
@@ -130,6 +132,13 @@ onUnmounted(() => {
       </button>
     </div>
 
+    <nav class="filter-tabs mall-sections" aria-label="商城分类">
+      <button type="button" :class="{ active: slotType === 1 }" :disabled="purchasingGoodsId !== null" @click="slotType = 1">游戏商城</button>
+      <button type="button" :class="{ active: slotType === 4 }" :disabled="purchasingGoodsId !== null" @click="slotType = 4">SVIP 专属商城</button>
+    </nav>
+    <div v-if="slotType === 4 && mall?.membership" class="mall-message membership-status" role="status">
+      {{ mall.membership.isSvip ? 'SVIP 权益生效中 · 剩余 ' + mall.membership.remainingDays + ' 天' : '当前账号不是 SVIP，可浏览专属商品' }}
+    </div>
     <section class="mall-toolbar" aria-label="商品筛选">
       <div class="filter-tabs">
         <button v-for="entry in filters" :key="entry.key" type="button" :class="{ active: filter === entry.key }" @click="filter = entry.key">
@@ -191,11 +200,12 @@ onUnmounted(() => {
             <template v-else>
               <CommerceItemImage :src="goods.price.image" :alt="goods.price.name" size="sm" />
               <strong>{{ goods.price.count.toLocaleString() }}</strong>
+              <del v-if="goods.originalPrice">{{ goods.originalPrice.toLocaleString() }}</del>
             </template>
           </div>
-          <button type="button" :disabled="!goods.purchasable || purchasingGoodsId !== null" @click="choose(goods)">
-            <div class="i-carbon-shopping-cart-plus" />
-            {{ goods.purchasable ? '购买' : '已售罄' }}
+          <button type="button" :title="goods.unavailableReason" :disabled="!goods.purchasable || purchasingGoodsId !== null" @click="choose(goods)">
+            <div v-if="goods.purchasable" class="i-carbon-shopping-cart-plus" />
+            {{ goods.purchasable ? (goods.isFree ? '领取' : '购买') : (slotType === 4 && !mall?.membership?.isSvip ? 'SVIP 限定' : '暂不可购买') }}
           </button>
         </footer>
       </article>
@@ -290,6 +300,12 @@ onUnmounted(() => {
   background: var(--ui-danger-soft);
   font-size: 13px;
 }
+.membership-status {
+  border-color: var(--ui-border);
+  color: var(--ui-muted);
+  background: var(--ui-surface-soft);
+}
+.mall-sections { margin-top: 16px; }
 .mall-message.success {
   border-color: rgba(67, 141, 99, 0.2);
   color: #2e714b;
@@ -483,7 +499,11 @@ onUnmounted(() => {
   padding: 10px 14px;
   border-top: 1px solid rgba(58, 86, 68, 0.09);
 }
+.goods-price del { color: var(--ui-subtle); font-size: 10px; font-weight: 400; }
 .goods-price {
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -491,6 +511,8 @@ onUnmounted(() => {
   font-size: 13px;
 }
 .goods-card footer > button {
+  justify-content: center;
+  white-space: nowrap;
   display: flex;
   height: 34px;
   align-items: center;
@@ -578,5 +600,9 @@ onUnmounted(() => {
   .goods-price {
     font-size: 11px;
   }
+}
+@media (max-width: 360px) {
+  .goods-card footer { flex-wrap: wrap; }
+  .goods-card footer > button { width: 100%; }
 }
 </style>

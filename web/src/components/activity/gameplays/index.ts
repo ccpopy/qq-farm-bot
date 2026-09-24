@@ -8,6 +8,8 @@ import { stellarGameplay } from './stellar'
 import { weatherGameplay } from './weather'
 
 const gameplayModules: Record<ActivityGameplayKey, ActivityGameplayModule> = {
+  wish: { key: 'wish', defaultTab: 'wish', tabs: ['wish'] },
+  happy: { key: 'happy', defaultTab: 'happy', tabs: ['happy'] },
   pet: petGameplay,
   stellar: stellarGameplay,
   qixi: qixiGameplay,
@@ -17,6 +19,8 @@ const gameplayModules: Record<ActivityGameplayKey, ActivityGameplayModule> = {
 }
 
 function inferGameplayKey(activity: ActivityDirectoryItemDto): ActivityGameplayKey | null {
+  if (activity.detailTarget === 'wish' || activity.detailTarget === 'happy')
+    return activity.detailTarget
   if (activity.gameplayKey)
     return activity.gameplayKey
   if (activity.detailTarget === 'pet' || activity.activityIds.some(id => ['2026090100', '2026090101', '2026090102', '2026090103'].includes(id)))
