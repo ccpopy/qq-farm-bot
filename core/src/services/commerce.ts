@@ -63,18 +63,36 @@ async function currencyBalances(ids: number[]): Promise<Record<string, number>> 
 }
 
 function limitDto(limit: any): any {
-    if (!limit) return null;
+    if (!limit || toNum(limit.limit_type) === 0) return null;
     const bought = Math.max(0, toNum(limit.bought_count));
     const max = Math.max(0, toNum(limit.limit_count));
     return {
         type: Math.max(0, toNum(limit.limit_type)),
         bought,
         max,
-        remaining: max > 0 ? Math.max(0, max - bought) : null,
+        remaining: Math.max(0, max - bought),
     };
 }
 
-function mallGoodsDto(goods: any, balances: Record<string, number>): any {
+function mallAvailability(goods: any, limit: any, slotType: number): { status: string; reason: string } {
+    if (goods?.is_owned) return { status: 'owned', reason: '已拥有该商品' };
+    if (limit?.remaining === 0) {
+        return { status: 'sold_out', reason: goods?.is_free ? '奖励已领取' : '商品已售罄，已达到限购上限' };
+    }
+    if (goods?.ad_only) return { status: 'ad_required', reason: '请在游戏内观看广告领取' };
+    if (goods?.share?.share_only && toNum(goods.share.share_status) !== 2) {
+        return { status: 'share_required', reason: '请在游戏内完成分享条件' };
+    }
+    // Normal unrestricted products omit field 8 in live replies. The official
+    // client uses restriction presence/type to distinguish unlimited purchases.
+    // SVIP still requires its own availability flag and membership check.
+    if (goods?.is_available !== true && !(slotType === 1 && !limit)) {
+        return { status: 'unavailable', reason: '商品当前不可购买' };
+    }
+    return { status: 'available', reason: '' };
+}
+
+function mallGoodsDto(goods: any, balances: Record<string, number>, slotType: number): any {
     const price = itemDto(goods?.price);
     const originalPrice = price.count;
     const discountPrice = Math.max(0, toNum(goods?.discount_price));
@@ -85,8 +103,7 @@ function mallGoodsDto(goods: any, balances: Record<string, number>): any {
     if (promotionActive) price.count = discountPrice;
     const limit = limitDto(goods?.purchase_limit);
     const isFree = goods?.is_free === true && price.count === 0;
-    const shareRequired = !!goods?.share?.share_only && toNum(goods.share.share_status) !== 2;
-    const available = goods?.is_available === true && !goods?.ad_only && !shareRequired && !goods?.is_owned;
+    const availability = mallAvailability(goods, limit, slotType);
     const balance = price.id > 0 && Object.hasOwn(balances, String(price.id))
         ? balances[String(price.id)]
         : null;
@@ -99,14 +116,15 @@ function mallGoodsDto(goods: any, balances: Record<string, number>): any {
         originalPrice: promotionActive ? originalPrice : null,
         isFree,
         limit,
-        isLimited: !!limit && limit.max > 0,
+        isLimited: !!limit,
         productType: toNum(goods?.product_type),
-        unavailableReason: goods?.is_owned ? '已拥有' : goods?.ad_only ? '请在游戏内观看广告领取' : shareRequired ? '请在游戏内完成分享条件' : !available ? '暂不可购买' : '',
+        purchaseStatus: availability.status,
+        unavailableReason: availability.reason,
         discountText: discountPrice > 0 && !promotionActive ? '' : String(goods?.discount_text || ''),
         isDiscounted: discountPrice > 0 ? promotionActive : !!goods?.is_discounted,
         discountEndTime: Math.max(0, discountPrice > 0 ? promotionEnd : toNum(goods?.discount_end_time)) * 1000,
-        available,
-        purchasable: available && (!limit || limit.remaining === null || limit.remaining > 0),
+        available: availability.status === 'available',
+        purchasable: availability.status === 'available',
     };
 }
 
@@ -132,8 +150,10 @@ async function getMallCatalog(slotTypeInput: unknown = 1, subSlotTypeInput: unkn
         refreshCountdown: Math.max(0, toNum(reply?.refresh_countdown)),
         currencies: Array.from(new Set(currencyIds), id => ({ ...itemDto({ id, count: balances[String(id)] || 0 }), balanceKnown: Object.hasOwn(balances, String(id)) })),
         goods: goods.map((entry: any) => {
-            const product = mallGoodsDto(entry, balances);
-            return membership && !membership.isSvip ? { ...product, purchasable: false, unavailableReason: '需要 SVIP 会员身份' } : product;
+            const product = mallGoodsDto(entry, balances, slotType);
+            return membership && !membership.isSvip
+                ? { ...product, available: false, purchasable: false, purchaseStatus: 'svip_required', unavailableReason: '需要 SVIP 会员身份' }
+                : product;
         }),
     };
 }
@@ -148,6 +168,7 @@ async function purchaseMallProduct(goodsIdInput: unknown, countInput: unknown, s
     const before = await getMallCatalog(slotType, 0);
     const goods = before.goods.find((entry: any) => entry.id === goodsId);
     if (!goods) throw businessError('GOODS_NOT_FOUND', 'Mall goods not found');
+    if (goods.purchaseStatus === 'sold_out') throw businessError('GOODS_SOLD_OUT', goods.unavailableReason);
     if (!goods.purchasable) throw businessError('GOODS_UNAVAILABLE', 'Mall goods is unavailable');
     if (expectedPrice && (Number(expectedPrice.id) !== goods.price.id || Number(expectedPrice.count) !== goods.price.count)) {
         throw businessError('MALL_PRICE_CHANGED', '商品价格已变化，请刷新商城后重新确认');

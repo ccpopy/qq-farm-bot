@@ -32,6 +32,7 @@ export interface MallGoodsDto {
   discountEndTime: number
   available: boolean
   purchasable: boolean
+  purchaseStatus?: 'available' | 'sold_out' | 'owned' | 'ad_required' | 'share_required' | 'svip_required' | 'unavailable'
   unavailableReason?: string
 }
 

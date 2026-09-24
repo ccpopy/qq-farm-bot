@@ -8,6 +8,7 @@ import PurchaseDialog from '@/components/commerce/PurchaseDialog.vue'
 import { useAccountStore } from '@/stores/account'
 import { useCommerceStore } from '@/stores/commerce'
 import { useToastStore } from '@/stores/toast'
+import { getMallPurchaseAction } from '@/utils/mall-purchase'
 
 type FilterKey = 'all' | 'free' | 'discount' | 'fertilizer' | 'pet' | 'activity'
 
@@ -51,7 +52,7 @@ const filteredGoods = computed(() => {
     if (filter.value === 'activity')
       return goods.isDiscounted || goods.rewards.some(item => [1028, 1029, 1030, 80101, 80102, 80103, 90031, 90032, 90033, 90034, 90041, 29004, 101305, 101613, 6001, 6002, 26030, 90042].includes(Number(item.id)))
     return true
-  })
+  }).map(goods => ({ ...goods, action: getMallPurchaseAction(goods, slotType === 4 ? mall.value?.membership : null) }))
 })
 
 const refreshRemaining = computed(() => {
@@ -69,7 +70,7 @@ function load() {
 }
 
 function choose(goods: MallGoodsDto) {
-  if (goods.purchasable)
+  if (getMallPurchaseAction(goods, slotType === 4 ? mall.value?.membership : null).enabled)
     selected.value = goods
 }
 
@@ -167,7 +168,7 @@ onUnmounted(() => {
     </div>
 
     <section v-else class="goods-grid" aria-live="polite">
-      <article v-for="goods in filteredGoods" :key="goods.id" class="goods-card" :class="{ unavailable: !goods.purchasable }">
+      <article v-for="goods in filteredGoods" :key="goods.id" class="goods-card" :class="{ unavailable: !goods.action.enabled }">
         <div class="goods-visual">
           <CommerceItemImage :src="goods.rewards[0]?.image" :alt="goods.rewards[0]?.name || goods.name" size="lg" />
           <span v-if="goods.isFree" class="goods-badge free">免费</span>
@@ -198,9 +199,9 @@ onUnmounted(() => {
               <del v-if="goods.originalPrice">{{ goods.originalPrice.toLocaleString() }}</del>
             </template>
           </div>
-          <button type="button" :title="goods.unavailableReason" :disabled="!goods.purchasable || purchasingGoodsId !== null" @click="choose(goods)">
-            <div v-if="goods.purchasable" class="i-carbon-shopping-cart-plus" />
-            {{ goods.purchasable ? (goods.isFree ? '领取' : '购买') : (slotType === 4 && !mall?.membership?.isSvip ? 'SVIP 限定' : '暂不可购买') }}
+          <button type="button" :title="goods.action.reason" :disabled="!goods.action.enabled || purchasingGoodsId !== null" @click="choose(goods)">
+            <div v-if="goods.action.enabled" class="i-carbon-shopping-cart-plus" />
+            {{ goods.action.label }}
           </button>
         </footer>
       </article>

@@ -80,3 +80,50 @@ test('merchant clears previous account goods and invalidates pending loads on re
   await next
   assert.equal(value.mystery, null)
 })
+
+function purchaseAction() {
+  const source = readFileSync(new URL('../src/utils/mall-purchase.ts', import.meta.url), 'utf8')
+  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
+  const module = { exports: {} }
+  new Function('require', 'module', 'exports', outputText)(require, module, module.exports)
+  return module.exports.getMallPurchaseAction
+}
+
+test('mall actions distinguish stock, entitlement and current currency balances', () => {
+  const action = purchaseAction()
+  const goods = { purchasable: true, purchaseStatus: 'available', isFree: false, price: { id: 1004, name: '钻石', count: 5, balance: 87 }, limit: null }
+  assert.equal(action(goods).label, '购买')
+  assert.equal(action(goods).enabled, true)
+  assert.equal(action({ ...goods, price: { id: 1002, name: '点券', count: 42, balance: 13756 } }).enabled, true)
+  assert.equal(action({ ...goods, price: { ...goods.price, balance: 4 } }).label, '余额不足')
+  assert.equal(action({ ...goods, price: { ...goods.price, balance: null } }).label, '余额未确认')
+  for (const [purchaseStatus, label] of [['sold_out', '售罄'], ['svip_required', 'SVIP 限定'], ['owned', '已拥有'], ['ad_required', '广告领取'], ['share_required', '需先分享'], ['unavailable', '暂不可购买']]) {
+    const result = action({ ...goods, purchaseStatus, purchasable: false })
+    assert.equal(result.label, label)
+    assert.equal(result.enabled, false)
+  }
+  assert.equal(action({ ...goods, isFree: true, purchaseStatus: 'sold_out', purchasable: false }).label, '已领取')
+  assert.equal(action({ ...goods, purchaseStatus: undefined, limit: { remaining: 0 } }).label, '售罄')
+  assert.equal(action(goods, { isSvip: false, remainingDays: 0 }).enabled, false)
+})
+
+test('delayed diamond balance cannot leak across accounts or an account round trip', async (t) => {
+  const requests = []
+  const { value, select } = store(t, 'commerce', { get: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })) })
+  const catalog = () => ({ slotType: 1, currencies: [{ id: 1004, count: 0, balanceKnown: false }], goods: [{ id: 1007, purchasable: true, price: { id: 1004, count: 5, balance: null } }] })
+  const reply = (index, data) => requests[index].resolve({ data: { ok: true, data } })
+  const oldA = value.fetchMall('a'); reply(0, catalog()); await Promise.resolve()
+  assert.equal(requests[1].url, '/api/diamond')
+  select('b')
+  const b = value.fetchMall('b'); reply(2, catalog()); await Promise.resolve()
+  reply(3, { diamond: 2 }); await b
+  assert.equal(value.mall.currencies[0].count, 2)
+  assert.equal(value.mall.goods[0].price.balance, 2)
+  select('a')
+  const newA = value.fetchMall('a'); reply(4, catalog()); await Promise.resolve()
+  reply(5, { diamond: 99 }); await newA
+  reply(1, { diamond: 87 }); await oldA
+  assert.equal(value.mall.currencies[0].count, 99)
+  assert.equal(value.mall.goods[0].price.balance, 99)
+  assert.deepEqual(requests.map(request => request.options.headers['x-account-id']), ['a', 'a', 'b', 'b', 'a', 'a'])
+})
