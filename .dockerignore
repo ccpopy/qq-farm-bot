@@ -23,4 +23,5 @@ coverage
 output/
 protocol-captures/
 docs/performance-analysis/
+docs/task-metrics-*.jsonl
 **/tests/
