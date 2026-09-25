@@ -3,6 +3,7 @@ const { Buffer } = require('node:buffer');
 const { EventEmitter } = require('node:events');
 const WebSocket = require('ws');
 const { CONFIG } = require('../config/config');
+const { getClientVersion, getLoginDeviceInfo, isWechatPlatform } = require('./client-profile');
 const { createScheduler } = require('../services/scheduler');
 const { updateStatusFromLogin, updateStatusGold, updateStatusLevel } = require('../services/status');
 const { recordOperation } = require('../services/stats');
@@ -26,7 +27,7 @@ const {
     selectDispatchIndex,
 } = require('./request-priority');
 const { getAmbientRequestClass } = require('./request-context');
-const { startAceRuntime, stopAceRuntime } = require('../services/ace');
+const { startAceRuntime, stopAceRuntime, getAceDiagnostics } = require('../services/ace');
 
 // ============ 事件发射器 (用于推送通知) ============
 const networkEvents = new EventEmitter();
@@ -44,6 +45,7 @@ interface ConnectionContext {
     intentionalClose: boolean;
     finalized: boolean;
     loginInitialized: boolean;
+    startedAt?: number;
     sendTail?: Promise<void>;
 }
 
@@ -538,10 +540,14 @@ function handleNotify(msg: any): void {
             log('推送', `被踢下线! ${type}`);
             try {
                 const notify = types.KickoutNotify.decode(eventBody);
-                log('推送', `原因: ${notify.reason_message || '未知'}`);
+                const reasonCode = toNum(notify.reason);
+                const diagnostics = getConnectionDiagnostics(currentConnection);
+                log('推送', `原因: ${notify.reason_message || '未知'} (${reasonCode})`, { reasonCode, diagnostics });
                 networkEvents.emit('kickout', {
                     type,
                     reason: notify.reason_message || '未知',
+                    reasonCode,
+                    diagnostics,
                 });
             } catch {}
             return;
@@ -810,24 +816,26 @@ function handleNotify(msg: any): void {
 }
 
 // ============ 登录 ============
-async function sendLogin(context: ConnectionContext, onLoginSuccess?: () => void): Promise<void> {
-    const di = CONFIG.deviceInfo || {};
-    const body = types.LoginRequest.encode(types.LoginRequest.create({
+function buildLoginBody(): Buffer {
+    return Buffer.from(types.LoginRequest.encode(types.LoginRequest.create({
         sharer_id: toLong(0),
         sharer_open_id: '',
         device_info: {
-            client_version: di.clientVersion || CONFIG.clientVersion,
-            sys_software: di.sysSoftware || 'Windows',
-            screen_width: 0,
+            ...getLoginDeviceInfo(),
+            ...(isWechatPlatform() ? {} : { screen_width: 0 }),
         },
         share_cfg_id: toLong(0),
-        scene_id: '1234567',
+        // WeChat launch scene is entry-dependent and unavailable from a standalone Code.
+        scene_id: isWechatPlatform() ? undefined : '1234567',
         report_data: {
-            minigame_channel: 'other-qq',
+            minigame_channel: isWechatPlatform() ? 'other' : 'other-qq',
             minigame_platid: 2,
         },
-    })).finish();
+    })).finish());
+}
 
+async function sendLogin(context: ConnectionContext, onLoginSuccess?: () => void): Promise<void> {
+    const body = buildLoginBody();
     await sendMsg(context, 'gamepb.userpb.UserService', 'Login', body, {
         expectedErrorCodes: new Set(),
         requestClass: 'critical',
@@ -934,7 +942,7 @@ function startHeartbeat(context: ConnectionContext): void {
 
         const body = types.HeartbeatRequest.encode(types.HeartbeatRequest.create({
             gid: toLong(userState.gid),
-            client_version: CONFIG.clientVersion,
+            client_version: getClientVersion(),
             field_3: toLong(0),
         })).finish();
         try {
@@ -991,6 +999,22 @@ function clearNetworkRuntime(reason: string): void {
     userState.openId = '';
 }
 
+function getConnectionDiagnostics(context: ConnectionContext | null) {
+    return {
+        platform: CONFIG.platform,
+        clientVersion: getClientVersion(),
+        connectionAgeMs: context?.startedAt ? Math.max(0, Date.now() - context.startedAt) : 0,
+        ...getGatewayLoad(),
+        lastInboundAgeMs: Math.max(0, Date.now() - lastInboundAt),
+        lastHeartbeatAgeMs: Math.max(0, Date.now() - lastHeartbeatResponse),
+        heartbeatMissCount,
+        pendingRequests: describePendingRequests(),
+        queuedRequests: describeQueuedRequests(),
+        ace: getAceDiagnostics(),
+        tsdk: cryptoWasm.getDiagnostics(),
+    };
+}
+
 function finalizeConnection(context: ConnectionContext, details: DisconnectDetails): void {
     if (context.finalized) return;
     context.finalized = true;
@@ -998,13 +1022,7 @@ function finalizeConnection(context: ConnectionContext, details: DisconnectDetai
     const wasLoginReady = context.phase === 'online';
     // Capture before clearing queues/user state; otherwise the final log always
     // reports zero pressure and loses the evidence needed to diagnose a stop.
-    const diagnostics = {
-        ...getGatewayLoad(),
-        lastInboundAgeMs: Math.max(0, Date.now() - lastInboundAt),
-        lastHeartbeatAgeMs: Math.max(0, Date.now() - lastHeartbeatResponse),
-        pendingRequests: describePendingRequests(),
-        queuedRequests: describeQueuedRequests(),
-    };
+    const diagnostics = getConnectionDiagnostics(context);
     if (wasCurrent) {
         currentConnection = null;
         ws = null;
@@ -1031,11 +1049,14 @@ function connect(code: string | null, onLoginSuccess?: () => void): void {
 
     clientSeq = 1;
     serverSeq = 0;
+    lastInboundAt = Date.now();
+    lastHeartbeatResponse = Date.now();
+    heartbeatMissCount = 0;
     const url = new URL(CONFIG.serverUrl);
     url.search = new URLSearchParams({
         platform: CONFIG.platform,
         os: CONFIG.os,
-        ver: CONFIG.clientVersion,
+        ver: getClientVersion(),
         code: authCode,
     }).toString();
     const di = CONFIG.deviceInfo || {};
@@ -1052,6 +1073,7 @@ function connect(code: string | null, onLoginSuccess?: () => void): void {
         intentionalClose: false,
         finalized: false,
         loginInitialized: false,
+        startedAt: Date.now(),
     };
     currentConnection = context;
     ws = socket;
@@ -1114,7 +1136,7 @@ function cleanup(reason = '网络清理'): void {
 function getWs(): WebSocket | null { return ws; }
 
 module.exports = {
-    connect, cleanup, getWs,
+    connect, cleanup, getWs, buildLoginBody,
     sendMsgAsync, sendMsgNoReply,
     getGatewayLoad, isGatewayIdleForBackground, waitForGatewayIdle,
     GatewayError, GatewayBusyError,

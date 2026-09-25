@@ -843,10 +843,12 @@ function handleTerminalDisconnect(payload: any): void {
 function onKickout(payload: any): void {
     if (shutdownStarted) return;
     const reason = payload && payload.reason ? payload.reason : '未知';
-    log('系统', `检测到踢下线，准备自动停止账号。原因: ${reason}`);
+    const reasonCode = Number(payload?.reasonCode) || 0;
+    const diagnostics = payload?.diagnostics || null;
+    log('系统', `检测到踢下线，准备自动停止账号。原因: ${reason} (${reasonCode})`, { reasonCode, diagnostics });
     saveStats();
     quiesceBot(`踢下线: ${reason}`);
-    sendToMaster({ type: 'account_kicked', reason });
+    sendToMaster({ type: 'account_kicked', reason, reasonCode, diagnostics });
     setTimeout(exitWorker, 300, 0);
 }
 

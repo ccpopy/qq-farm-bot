@@ -20,10 +20,10 @@ function connectionHarness() {
             clear(key) { clearTimeout(timers.get(key)); timers.delete(key); },
             clearAll() { for (const timer of timers.values()) clearTimeout(timer); timers.clear(); },
         }) },
-        '../services/status': {}, '../services/stats': {}, '../services/ace': { stopAceRuntime() {} },
+        '../services/status': {}, '../services/stats': {}, '../services/ace': { stopAceRuntime() {}, getAceDiagnostics: () => ({}) },
         './proto': { types: { GateMessage: stubType } },
         './utils': { toLong: Number, toNum: Number, log: (...args) => logs.push(args), logWarn: (...args) => logs.push(args) },
-        './crypto-wasm': { encryptBuffer: async bytes => { await encrypted; return bytes; } },
+        './crypto-wasm': { getDiagnostics: () => null, encryptBuffer: async bytes => { await encrypted; return bytes; } },
     };
     const sandbox = { require: name => overrides[name] || realRequire(name), module: { exports: {} }, exports: {}, Buffer, console, process, setTimeout, clearTimeout };
     const source = `${fs.readFileSync(filename, 'utf8')  }

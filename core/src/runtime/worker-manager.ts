@@ -380,14 +380,16 @@ function createWorkerManager(options: WorkerManagerOptions) {
             if (worker.terminalHandled) return;
             worker.terminalHandled = true;
             const reason = msg.reason || '未知';
-            log('系统', `账号 ${worker.name} 被踢下线，已自动停止账号`, { accountId: String(accountId), accountName: worker.name });
+            const reasonCode = Number(msg.reasonCode) || 0;
+            const diagnostics = msg.diagnostics || null;
+            log('系统', `账号 ${worker.name} 被踢下线，已自动停止账号`, { accountId: String(accountId), accountName: worker.name, reasonCode, diagnostics });
             triggerOfflineReminder({
                 accountId,
                 accountName: worker.name,
                 reason: `kickout:${reason}`,
                 offlineMs: 0,
             });
-            addAccountLog('kickout_stop', `账号 ${worker.name} 被踢下线，已自动停止`, accountId, worker.name, { reason });
+            addAccountLog('kickout_stop', `账号 ${worker.name} 被踢下线，已自动停止`, accountId, worker.name, { reason, reasonCode, diagnostics });
             stopWorker(accountId);
         } else if (msg.type === 'account_disconnected') {
             if (worker.terminalHandled) return;

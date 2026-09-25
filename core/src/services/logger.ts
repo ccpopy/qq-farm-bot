@@ -11,7 +11,7 @@ try {
 }
 
 const SENSITIVE_KEY_RE = /code|token|password|passwd|auth|ticket|cookie|session/i;
-const DIAGNOSTIC_CODE_KEY_RE = /^(?:disconnect|close|error|http|status|exit)Code$/i;
+const DIAGNOSTIC_CODE_KEY_RE = /^(?:disconnect|close|error|http|status|exit|reason)Code$/i;
 
 function redactString(input: any): string {
     let text = String(input || '');
