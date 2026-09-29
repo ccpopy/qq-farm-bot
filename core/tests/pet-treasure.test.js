@@ -68,7 +68,14 @@ test('real adult snapshot exposes escort value, challenge limit, fixed charms an
     assert.equal(t.createdTime, 1789014403000);
     assert.deepEqual([t.plunderCount, t.maxPlunderCount], [0, 3]);
     assert.deepEqual(t.sourceCharmIds, []);
-    assert.equal(state.charms.all.length, 5);
+    assert.equal(state.charms.all.length, 10);
+    for (const [id, name] of [[109, '分身护宝'], [111, '全力御守'], [112, '防守胜率'], [113, '掠夺胜率'], [114, '全力争夺']]) {
+        const charm = state.charms.all.find(c => c.id === id);
+        assert.equal(charm.name, name);
+        assert.ok(charm.description.length > 0);
+        assert.match(charm.image, /img_s3_skillType[234]\.png$/);
+        assert.equal(charm.useLimit, -1);
+    }
     assert.equal(state.charms.equipped[0].id, 104);
     assert.equal(state.charms.equipped[0].useLimit, -1);
     assert.equal(state.charms.all.find(c => c.id === 105).remaining[0], 2);

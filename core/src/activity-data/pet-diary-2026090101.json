@@ -8,7 +8,7 @@
       "daily_feed_limit": 16,
       "daily_treasure_limit": 10,
       "treasure_cost": "1028:700",
-      "treasure_show_count": 1
+      "treasure_show_count": 2
     }
   ],
   "ActivityPetTreasureHuntFight": [
@@ -18,7 +18,8 @@
       "treasure_capacity": 50,
       "fake_log_tips": "触发锦囊[移花接木]，狼狈离场。",
       "get_treasure_tips": "暂无[待护送宝藏]，与比熊互动获取",
-      "not_plunder_tips": "比熊尚未成年，无法进行夺宝"
+      "not_plunder_tips": "比熊尚未成年，无法进行夺宝",
+      "dog_animations": "0:ui_anim_{0}_base;90032:ui_anim_{0}_skin1;90033:ui_anim_{0}_skin2;90034:ui_anim_{0}_skin3;90042:ui_anim_{0}_skin4;90035:ui_anim_{0}_skin5"
     }
   ],
   "ActivityPetTreasureHuntChalleng": [
@@ -54,8 +55,9 @@
       "attacker_log_tip": null,
       "is_defender_use_log": false,
       "defender_log_tip": null,
-      "order": 1,
-      "short_desc": "元气糕消耗-10%"
+      "order": 11,
+      "short_desc": "寻宝时，元气糕消耗-10%",
+      "effect_time": "2026-09-10 10:00:00"
     },
     {
       "activity_id": 2026090101,
@@ -69,8 +71,9 @@
       "attacker_log_tip": null,
       "is_defender_use_log": false,
       "defender_log_tip": null,
-      "order": 2,
-      "short_desc": "宝藏价值+50幸运星"
+      "order": 21,
+      "short_desc": "宝藏价值+50幸运星",
+      "effect_time": "2026-09-10 10:00:00"
     },
     {
       "activity_id": 2026090101,
@@ -84,8 +87,9 @@
       "attacker_log_tip": null,
       "is_defender_use_log": false,
       "defender_log_tip": null,
-      "order": 3,
-      "short_desc": "遭夺后8小时内复仇，成功率+25%"
+      "order": 31,
+      "short_desc": "遭夺后8小时内复仇，成功率+25%",
+      "effect_time": "2026-09-10 10:00:00"
     },
     {
       "activity_id": 2026090101,
@@ -99,8 +103,9 @@
       "attacker_log_tip": null,
       "is_defender_use_log": false,
       "defender_log_tip": null,
-      "order": 4,
-      "short_desc": "掠夺胜+10%，败则-30%"
+      "order": 41,
+      "short_desc": "掠夺胜+10%，败则-30%",
+      "effect_time": "2026-09-10 10:00:00"
     },
     {
       "activity_id": 2026090101,
@@ -114,8 +119,89 @@
       "attacker_log_tip": null,
       "is_defender_use_log": false,
       "defender_log_tip": null,
-      "order": 5,
-      "short_desc": "遭夺 50% 放假宝阻抢夺，限 2 次"
+      "order": 51,
+      "short_desc": "遭夺宝，50% 出假宝藏，限 2 次",
+      "effect_time": "2026-09-10 10:00:00"
+    },
+    {
+      "activity_id": 2026090101,
+      "charm_id": 109,
+      "name": "分身护宝",
+      "desc": "比熊开启宝藏护送时，有30%概率触发分身，同时护送 2 个宝藏。",
+      "icon_path": "gui/texture/Season/S3/S3SkillType/img_s3_skillType2/spriteFrame",
+      "group_type_id": 2,
+      "use_limit": -1,
+      "is_attacker_use_log": false,
+      "attacker_log_tip": null,
+      "is_defender_use_log": false,
+      "defender_log_tip": null,
+      "order": 23,
+      "short_desc": "有概率同时护送2个宝藏",
+      "effect_time": "2026-09-18 00:00:00"
+    },
+    {
+      "activity_id": 2026090101,
+      "charm_id": 111,
+      "name": "全力御守",
+      "desc": "宝藏被夺时：我方获胜，全额获得挑战书价值；我方失败，全额扣除挑战书价值。",
+      "icon_path": "gui/texture/Season/S3/S3SkillType/img_s3_skillType3/spriteFrame",
+      "group_type_id": 3,
+      "use_limit": -1,
+      "is_attacker_use_log": false,
+      "attacker_log_tip": null,
+      "is_defender_use_log": false,
+      "defender_log_tip": null,
+      "order": 33,
+      "short_desc": "防守时，胜负全额结算",
+      "effect_time": "2026-09-18 00:00:00"
+    },
+    {
+      "activity_id": 2026090101,
+      "charm_id": 112,
+      "name": "防守胜率",
+      "desc": "比熊犬守护宝藏时，初始胜率+10%。",
+      "icon_path": "gui/texture/Season/S3/S3SkillType/img_s3_skillType3/spriteFrame",
+      "group_type_id": 3,
+      "use_limit": -1,
+      "is_attacker_use_log": false,
+      "attacker_log_tip": null,
+      "is_defender_use_log": false,
+      "defender_log_tip": null,
+      "order": 34,
+      "short_desc": "防守胜率+10%",
+      "effect_time": "2026-09-18 00:00:00"
+    },
+    {
+      "activity_id": 2026090101,
+      "charm_id": 113,
+      "name": "掠夺胜率",
+      "desc": "比熊犬掠夺宝藏时，初始胜率+10%。",
+      "icon_path": "gui/texture/Season/S3/S3SkillType/img_s3_skillType4/spriteFrame",
+      "group_type_id": 4,
+      "use_limit": -1,
+      "is_attacker_use_log": false,
+      "attacker_log_tip": null,
+      "is_defender_use_log": false,
+      "defender_log_tip": null,
+      "order": 42,
+      "short_desc": "掠夺胜率+10%",
+      "effect_time": "2026-09-18 00:00:00"
+    },
+    {
+      "activity_id": 2026090101,
+      "charm_id": 114,
+      "name": "全力争夺",
+      "desc": "发起夺宝时：我方获胜，全额获得挑战书价值；我方失败，全额扣除挑战书价值。",
+      "icon_path": "gui/texture/Season/S3/S3SkillType/img_s3_skillType4/spriteFrame",
+      "group_type_id": 4,
+      "use_limit": -1,
+      "is_attacker_use_log": false,
+      "attacker_log_tip": null,
+      "is_defender_use_log": false,
+      "defender_log_tip": null,
+      "order": 43,
+      "short_desc": "掠夺时，胜负全额结算",
+      "effect_time": "2026-09-18 00:00:00"
     }
   ],
   "ActivityPetTreasureCharmRefresh": [
