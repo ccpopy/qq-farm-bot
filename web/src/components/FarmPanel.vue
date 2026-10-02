@@ -9,6 +9,7 @@ import { useRoute } from 'vue-router'
 import CareerHarvestSteal from '@/components/CareerHarvestSteal.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import LandCard from '@/components/LandCard.vue'
+import LandDetailModal from '@/components/LandDetailModal.vue'
 import { useAccountStore } from '@/stores/account'
 import { useFarmStore } from '@/stores/farm'
 import { useSettingStore } from '@/stores/setting'
@@ -41,6 +42,11 @@ const {
 const { currentAccountId, currentAccount } = storeToRefs(accountStore)
 const { settings } = storeToRefs(settingStore)
 const { status } = storeToRefs(statusStore)
+const detailLandId = ref<number | null>(null)
+const detailLand = computed(() => lands.value.find(land => land.id === detailLandId.value) || null)
+watch(currentAccountId, () => {
+  detailLandId.value = null
+})
 
 const currentAccountConnected = computed(() => {
   const accountId = String(currentAccountId.value || '')
@@ -645,6 +651,7 @@ onUnmounted(() => {
               v-for="land in lands"
               :key="land.id"
               :land="land"
+              show-details
               :selectable="!!selectedInteractionItem"
               :selected="isInteractionLandSelected(land)"
               :selection-disabled="isInteractionLandDisabled(land)"
@@ -657,6 +664,7 @@ onUnmounted(() => {
               :show-farming-action="isLandFarmingCandidate(land)"
               :farming-pending="farmingLandId === land.id"
               :farming-disabled="farmingLandId !== null || operating"
+              @details="detailLandId = $event.id"
               @select="toggleInteractionLand(land)"
               @fertilize="handleFertilize"
               @farm="handleFarmLand"
@@ -665,6 +673,8 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
+    <LandDetailModal :land="detailLand" :player="status?.status" :connected="currentAccountConnected" @close="detailLandId = null" />
 
     <ConfirmModal
       :show="confirmVisible"
